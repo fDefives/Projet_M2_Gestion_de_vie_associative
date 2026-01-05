@@ -10,6 +10,7 @@ De + en + **d'associations** qui ont de + en + de **documents**.
 - Grosses modifications en cas de modification de président.
 - Logo de la CAF
 - Réunion vendredi 30%.
+- PDF Only
 - 
 
 **DSI**
