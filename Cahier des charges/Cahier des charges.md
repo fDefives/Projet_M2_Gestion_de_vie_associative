@@ -11,7 +11,7 @@ De + en + **d'associations** qui ont de + en + de **documents**.
 - Logo de la CAF
 - Réunion vendredi 30%.
 - PDF Only
-- 
+- Prévoir compte technique pour accès BDD.
 
 **DSI**
 - Pas d'hébergement sur la fac.
@@ -24,4 +24,16 @@ De + en + **d'associations** qui ont de + en + de **documents**.
 - Renseigner les coordonnées des membres.
 - Migration des données.
 - Documents d'exemples.
+
+**Fonctionnalités**
+- Un compte admin a le droit:
+- Créer des associations.
+- Valider les documents.
+- Créer des tyoes de documents
+- Supprimer des associations.
+- Un compte utilisateur a le droit:
+- Déposer des documents.
+- Voir l'état d'avancement de la validation.
+- Modifier les informations de l'association.
+
 
