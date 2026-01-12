@@ -31,18 +31,13 @@ if [ "$#" -gt 0 ]; then
 fi
 
 echo "Running migrations..."
+echo "Making migrations for 'api'..."
+python manage.py makemigrations api --noinput || true
+echo "Applying migrations..."
 python manage.py migrate --noinput
 
-echo "Initializing test data (if any)..."
-if python -c "import importlib, sys
-try:
-    importlib.import_module('api.management.commands.init_db')
-    sys.exit(0)
-except Exception:
-    sys.exit(1)
-"; then
-  python manage.py init_db || true
-fi
+echo "Initializing test data..."
+python manage.py init_db || true
 
 echo "Starting server..."
 exec python manage.py runserver 0.0.0.0:8000
