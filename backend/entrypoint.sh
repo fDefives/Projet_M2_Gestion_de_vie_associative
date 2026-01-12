@@ -1,5 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 set -e
+
 
 echo "Waiting for database..."
 # loop until python can open a socket to the DB
