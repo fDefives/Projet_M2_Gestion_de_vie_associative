@@ -16,5 +16,5 @@ COPY . .
 # Port utilisé par React
 EXPOSE 3000
 
-# Lancer l'application React
-CMD ["npm", "start"]
+# Lancer le serveur Vite en s'assurant que les dépendances existent
+CMD ["sh", "-c", "npm install && npm run start"]

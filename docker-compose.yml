@@ -39,6 +39,8 @@ services:
     restart: always
     volumes:
       - ./frontend:/app
+      # Préserver les dépendances installées dans le conteneur
+      - /app/node_modules
     ports:
       - "3000:3000"
     depends_on:
