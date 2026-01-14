@@ -105,7 +105,14 @@ class Document(models.Model):
     id_document = models.AutoField(primary_key=True)
     nom_fichier = models.FileField(
         upload_to='documents/%Y/%m/%d/',
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'])]
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=[
+                    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'
+                ]
+            )
+        ]
+
     )
     date_depot = models.DateTimeField(auto_now_add=True)
     date_expiration = models.DateField(blank=True, null=True)

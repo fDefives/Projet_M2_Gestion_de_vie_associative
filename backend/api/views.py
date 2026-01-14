@@ -1,15 +1,20 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+
 from .models import Association, Membre, TypeDocument, Document, Notification
 from .serializers import (
-    CustomUserSerializer, CustomUserCreateSerializer, AssociationSerializer,
-    MembreSerializer, TypeDocumentSerializer, DocumentSerializer, NotificationSerializer
+    CustomUserSerializer,
+    CustomUserCreateSerializer,
+    AssociationSerializer,
+    MembreSerializer,
+    TypeDocumentSerializer,
+    DocumentSerializer,
+    NotificationSerializer
 )
-from .permissions import IsAdmin, IsAdminOrReadOnly, IsAssociationMemberOrAdmin, IsDocumentOwnerOrAdmin
+from .permissions import IsAdmin, IsAdminOrReadOnly, IsDocumentOwnerOrAdmin
 
 User = get_user_model()
 

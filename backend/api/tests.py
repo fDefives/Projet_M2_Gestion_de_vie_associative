@@ -3,12 +3,12 @@ Tests de l'API - Vérifier le système de rôles et les endpoints
 """
 
 import os
-import django
-from django.test import TestCase, Client
+
+
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
-from api.models import Association, Document, TypeDocument, Membre
+from api.models import Association, Document, TypeDocument
 
 User = get_user_model()
 
