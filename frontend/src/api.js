@@ -1,0 +1,398 @@
+/**
+ * Exemple de configuration et utilisation de l'API Django depuis React
+ * 
+ * Installation requise:
+ * npm install axios
+ */
+
+import axios from 'axios';
+
+// Configuration de l'API
+const API_URL = 'http://localhost:8000/api';
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Intercepteur pour ajouter le token JWT à chaque requête
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ============= AUTHENTIFICATION =============
+
+/**
+ * Enregistrer un nouvel utilisateur
+ */
+export const registerUser = async (email, username, password, firstName, lastName) => {
+  try {
+    const response = await api.post('/users/register/', {
+      email,
+      username,
+      password,
+      password2: password,
+      first_name: firstName,
+      last_name: lastName,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de l\'enregistrement:', error);
+    throw error;
+  }
+};
+
+/**
+ * Se connecter et obtenir les tokens JWT
+ */
+export const loginUser = async (username, password) => {
+  try {
+    const response = await api.post('/auth/login/', {
+      username,
+      password,
+    });
+    
+    // Stocker les tokens
+    localStorage.setItem('access_token', response.data.access);
+    localStorage.setItem('refresh_token', response.data.refresh);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la connexion:', error);
+    throw error;
+  }
+};
+
+/**
+ * Rafraîchir le token d'accès
+ */
+export const refreshAccessToken = async () => {
+  try {
+    const refreshToken = localStorage.getItem('refresh_token');
+    const response = await api.post('/auth/refresh/', {
+      refresh: refreshToken,
+    });
+    
+    localStorage.setItem('access_token', response.data.access);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors du rafraîchissement du token:', error);
+    throw error;
+  }
+};
+
+/**
+ * Se déconnecter
+ */
+export const logout = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+};
+
+/**
+ * Obtenir le profil de l'utilisateur connecté
+ */
+export const getCurrentUser = async () => {
+  try {
+    const response = await api.get('/users/me/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération du profil:', error);
+    throw error;
+  }
+};
+
+// ============= ASSOCIATIONS =============
+
+/**
+ * Récupérer la liste des associations
+ */
+export const getAssociations = async () => {
+  try {
+    const response = await api.get('/associations/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des associations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Créer une association
+ */
+export const createAssociation = async (associationData) => {
+  try {
+    const response = await api.post('/associations/', associationData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la création de l\'association:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les détails d'une association
+ */
+export const getAssociationDetails = async (id) => {
+  try {
+    const response = await api.get(`/associations/${id}/`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'association:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les documents d'une association
+ */
+export const getAssociationDocuments = async (id) => {
+  try {
+    const response = await api.get(`/associations/${id}/documents/`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les membres d'une association
+ */
+export const getAssociationMembers = async (id) => {
+  try {
+    const response = await api.get(`/associations/${id}/members/`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des membres:', error);
+    throw error;
+  }
+};
+
+// ============= DOCUMENTS (Cœur du système de rôles) =============
+
+/**
+ * Récupérer les documents accessibles par l'utilisateur
+ * - Utilisateur: ses documents uniquement
+ * - Admin: tous les documents
+ */
+export const getDocuments = async () => {
+  try {
+    const response = await api.get('/documents/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les propres documents de l'utilisateur
+ */
+export const getMyDocuments = async () => {
+  try {
+    const response = await api.get('/documents/my_documents/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération de vos documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les documents d'une association (Admin)
+ */
+export const getDocumentsByAssociation = async (associationId) => {
+  try {
+    const response = await api.get('/documents/by_association/', {
+      params: { association_id: associationId },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les documents par statut (Admin)
+ */
+export const getDocumentsByStatus = async (status) => {
+  try {
+    const response = await api.get('/documents/by_status/', {
+      params: { status },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Ajouter un nouveau document
+ */
+export const uploadDocument = async (formData) => {
+  try {
+    const response = await api.post('/documents/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de l\'upload du document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les détails d'un document
+ */
+export const getDocumentDetails = async (id) => {
+  try {
+    const response = await api.get(`/documents/${id}/`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération du document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Approuver un document (Admin)
+ */
+export const approveDocument = async (id) => {
+  try {
+    const response = await api.patch(`/documents/${id}/approve/`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de l\'approbation du document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Rejeter un document (Admin)
+ */
+export const rejectDocument = async (id, comment) => {
+  try {
+    const response = await api.patch(`/documents/${id}/reject/`, {
+      commentaire_refus: comment,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors du rejet du document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprimer un document
+ * Utilisateur: peut supprimer ses propres documents
+ * Admin: peut supprimer n'importe quel document
+ */
+export const deleteDocument = async (id) => {
+  try {
+    const response = await api.delete(`/documents/${id}/`);
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du document:', error);
+    throw error;
+  }
+};
+
+// ============= MEMBRES =============
+
+/**
+ * Récupérer la liste des membres
+ */
+export const getMembers = async () => {
+  try {
+    const response = await api.get('/membres/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des membres:', error);
+    throw error;
+  }
+};
+
+/**
+ * Ajouter un member
+ */
+export const createMember = async (memberData) => {
+  try {
+    const response = await api.post('/membres/', memberData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la création du membre:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprimer un membre
+ */
+export const deleteMember = async (id) => {
+  try {
+    const response = await api.delete(`/membres/${id}/`);
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du membre:', error);
+    throw error;
+  }
+};
+
+// ============= NOTIFICATIONS =============
+
+/**
+ * Récupérer les notifications
+ */
+export const getNotifications = async () => {
+  try {
+    const response = await api.get('/notifications/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des notifications:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les notifications non lues
+ */
+export const getUnreadNotifications = async () => {
+  try {
+    const response = await api.get('/notifications/unread/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des notifications non lues:', error);
+    throw error;
+  }
+};
+
+/**
+ * Marquer les notifications comme lues
+ */
+export const markNotificationsAsRead = async (ids) => {
+  try {
+    const response = await api.post('/notifications/mark_as_read/', { ids });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors du marquage des notifications:', error);
+    throw error;
+  }
+};
+
+export default api;

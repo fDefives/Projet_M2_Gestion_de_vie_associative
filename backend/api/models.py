@@ -1,0 +1,149 @@
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import FileExtensionValidator
+
+
+class CustomUser(AbstractUser):
+    """Modèle utilisateur personnalisé avec rôles"""
+    ROLE_CHOICES = [
+        ('admin', 'Administrateur'),
+        ('user', 'Utilisateur'),
+    ]
+    
+    email = models.EmailField(unique=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.email} ({self.get_role_display()})"
+
+
+class Association(models.Model):
+    """Modèle association"""
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('suspended', 'Suspendue'),
+    ]
+    
+    id_association = models.AutoField(primary_key=True)
+    nom_association = models.CharField(max_length=255)
+    date_creation_association = models.DateField(auto_now_add=True)
+    ufr = models.CharField(max_length=100, blank=True, null=True)
+    statut = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    email_contact = models.EmailField(blank=True, null=True)
+    insta_contact = models.CharField(max_length=255, blank=True, null=True)
+    tel_contact = models.CharField(max_length=20, blank=True, null=True)
+    id_utilisateur = models.OneToOneField(CustomUser, on_delete=models.CASCADE, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.nom_association
+
+
+class Membre(models.Model):
+    """Modèle membre d'association"""
+    STATUS_CHOICES = [
+        ('active', 'Actif'),
+        ('inactive', 'Inactif'),
+        ('pending', 'En attente'),
+    ]
+    
+    id_membre = models.AutoField(primary_key=True)
+    prenom = models.CharField(max_length=100)
+    nom = models.CharField(max_length=100)
+    email = models.EmailField(blank=True, null=True)
+    tel = models.CharField(max_length=20, blank=True, null=True)
+    date_adhesion = models.DateField(auto_now_add=True)
+    statut_membre = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+    date_fin_adhesion = models.DateField(blank=True, null=True)
+    id_association = models.ForeignKey(Association, on_delete=models.CASCADE, related_name='membres')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.prenom} {self.nom} - {self.id_association}"
+
+
+class TypeDocument(models.Model):
+    """Modèle type de document"""
+    id_type_document = models.AutoField(primary_key=True)
+    libelle = models.CharField(max_length=100, unique=True)
+    obligatoire = models.BooleanField(default=False)
+    duree_validite_mois = models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['libelle']
+    
+    def __str__(self):
+        return self.libelle
+
+
+class Document(models.Model):
+    """Modèle document"""
+    STATUS_CHOICES = [
+        ('draft', 'Brouillon'),
+        ('submitted', 'Soumis'),
+        ('approved', 'Approuvé'),
+        ('rejected', 'Rejeté'),
+        ('expired', 'Expiré'),
+    ]
+    
+    id_document = models.AutoField(primary_key=True)
+    nom_fichier = models.FileField(
+        upload_to='documents/%Y/%m/%d/',
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'])]
+    )
+    date_depot = models.DateTimeField(auto_now_add=True)
+    date_expiration = models.DateField(blank=True, null=True)
+    statut = models.CharField(max_length=30, choices=STATUS_CHOICES, default='submitted')
+    commentaire_refus = models.TextField(blank=True, null=True)
+    id_association = models.ForeignKey(Association, on_delete=models.CASCADE, related_name='documents')
+    id_type_document = models.ForeignKey(TypeDocument, on_delete=models.SET_NULL, null=True)
+    uploaded_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='documents_uploaded')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-date_depot']
+    
+    def __str__(self):
+        return f"{self.nom_fichier} - {self.id_association}"
+
+
+class Notification(models.Model):
+    """Modèle notification"""
+    TYPE_CHOICES = [
+        ('info', 'Information'),
+        ('warning', 'Avertissement'),
+        ('error', 'Erreur'),
+        ('success', 'Succès'),
+    ]
+    
+    id_notification = models.AutoField(primary_key=True)
+    date_envoi = models.DateTimeField(auto_now_add=True)
+    sujet = models.CharField(max_length=255)
+    message = models.TextField()
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='info')
+    id_association = models.ForeignKey(Association, on_delete=models.CASCADE, related_name='notifications')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-date_envoi']
+    
+    def __str__(self):
+        return f"{self.sujet} - {self.id_association}"
