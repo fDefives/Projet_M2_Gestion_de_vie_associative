@@ -43,16 +43,28 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
     console.log('Loading:', loading, 'Associations count:', associations.length);
     const data = associations;
     const docs = documents;
-    
-    const total = data.length;
-    const active = data.filter(a => (a.status || a.statut) === 'active').length;
-    const complete = data.filter(a => a.completionRate === 100).length;
-    const incomplete = data.filter(a => a.completionRate < 100 && a.completionRate > 0).length;
-    const notStarted = data.filter(a => a.completionRate === 0).length;
-    
-    const pendingDocs = docs.filter(d => d.status === 'pending').length;
-    const expiredDocs = docs.filter(d => d.status === 'expired').length;
-    const rejectedDocs = docs.filter(d => d.status === 'rejected').length;
+
+    const associationHasDocs = (assoc: any) =>
+      docs.some(
+        (d) => d.id_association === assoc.id_association || d.id_association === assoc.id,
+      );
+
+    const normalized = data.map((a) => {
+      const hasDocs = associationHasDocs(a);
+      const completionRate = hasDocs ? a.completionRate ?? 0 : 0; // no docs => dossier non complet
+      return { ...a, completionRate, hasDocs };
+    });
+
+    const total = normalized.length;
+    const active = normalized.filter((a) => (a.status || a.statut) === 'active').length;
+    const complete = normalized.filter((a) => a.completionRate === 100 && a.hasDocs).length;
+    const incomplete = normalized.filter((a) => a.completionRate < 100 || !a.hasDocs).length;
+    const notStarted = normalized.filter((a) => a.completionRate === 0 || !a.hasDocs).length;
+
+    const statusValue = (d: any) => d.status || d.statut;
+    const pendingDocs = docs.filter((d) => statusValue(d) === 'pending').length;
+    const expiredDocs = docs.filter((d) => statusValue(d) === 'expired').length;
+    const rejectedDocs = docs.filter((d) => statusValue(d) === 'rejected').length;
 
     return {
       total,
@@ -63,12 +75,13 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
       pendingDocs,
       expiredDocs,
       rejectedDocs,
+      normalized,
     };
   }, [associations, documents, loading]);
 
-  const incompleteAssociations = associations
-    .filter(a => a.completionRate < 100)
-    .sort((a, b) => a.completionRate - b.completionRate);
+  const incompleteAssociations = stats.normalized
+    .filter((a: any) => a.completionRate < 100 || !a.hasDocs)
+    .sort((a: any, b: any) => a.completionRate - b.completionRate);
 
   return (
     <div className="space-y-6">
