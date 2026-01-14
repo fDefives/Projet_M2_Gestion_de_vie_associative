@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import make_password
 from .models import Association, Membre, TypeDocument, Document, Notification
 
 User = get_user_model()
@@ -43,8 +42,8 @@ class AssociationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Association
-        fields = ['id_association', 'nom_association', 'date_creation_association', 'ufr', 
-                  'statut', 'email_contact', 'insta_contact', 'tel_contact', 'id_utilisateur', 
+        fields = ['id_association', 'nom_association', 'date_creation_association', 'ufr',
+                  'statut', 'email_contact', 'insta_contact', 'tel_contact', 'id_utilisateur',
                   'user_email', 'created_at', 'updated_at']
         read_only_fields = ['id_association', 'date_creation_association', 'created_at', 'updated_at']
 
@@ -53,7 +52,7 @@ class MembreSerializer(serializers.ModelSerializer):
     """Serializer pour les membres"""
     class Meta:
         model = Membre
-        fields = ['id_membre', 'prenom', 'nom', 'email', 'tel', 'date_adhesion', 
+        fields = ['id_membre', 'prenom', 'nom', 'email', 'tel', 'date_adhesion',
                   'statut_membre', 'date_fin_adhesion', 'id_association', 'created_at', 'updated_at']
         read_only_fields = ['id_membre', 'date_adhesion', 'created_at', 'updated_at']
 
@@ -73,7 +72,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Document
-        fields = ['id_document', 'nom_fichier', 'date_depot', 'date_expiration', 'statut', 
+        fields = ['id_document', 'nom_fichier', 'date_depot', 'date_expiration', 'statut',
                   'commentaire_refus', 'id_association', 'id_type_document', 'type_document_name',
                   'uploaded_by', 'uploaded_by_email', 'created_at', 'updated_at']
         read_only_fields = ['id_document', 'date_depot', 'uploaded_by', 'created_at', 'updated_at']
@@ -83,6 +82,6 @@ class NotificationSerializer(serializers.ModelSerializer):
     """Serializer pour les notifications"""
     class Meta:
         model = Notification
-        fields = ['id_notification', 'date_envoi', 'sujet', 'message', 'type', 
+        fields = ['id_notification', 'date_envoi', 'sujet', 'message', 'type',
                   'id_association', 'is_read', 'created_at']
         read_only_fields = ['id_notification', 'date_envoi', 'created_at']
