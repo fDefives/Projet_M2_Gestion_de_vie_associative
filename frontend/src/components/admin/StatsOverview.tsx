@@ -1,22 +1,50 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2, Clock, TrendingUp, Users, FileText, AlertTriangle } from 'lucide-react';
 import { mockAssociations, mockDocuments, Association } from '../../lib/mockData';
+import * as API from '../../api';
 
 interface StatsOverviewProps {
   onSelectAssociation: (association: Association) => void;
 }
 
 export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
+  const [associations, setAssociations] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const assoData = await API.getAssociations();
+        const assoArray = Array.isArray(assoData) ? assoData : (assoData?.results || []);
+        setAssociations(assoArray);
+        
+        const docData = await API.getDocuments();
+        const docArray = Array.isArray(docData) ? docData : (docData?.results || []);
+        setDocuments(docArray);
+      } catch (error) {
+        console.error('Erreur:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
   const stats = useMemo(() => {
-    const total = mockAssociations.length;
-    const active = mockAssociations.filter(a => a.status === 'active').length;
-    const complete = mockAssociations.filter(a => a.completionRate === 100).length;
-    const incomplete = mockAssociations.filter(a => a.completionRate < 100 && a.completionRate > 0).length;
-    const notStarted = mockAssociations.filter(a => a.completionRate === 0).length;
+    console.log('Loading:', loading, 'Associations count:', associations.length);
+    const data = associations.length > 0 ? associations : mockAssociations;
+    const docs = documents.length > 0 ? documents : mockDocuments;
     
-    const pendingDocs = mockDocuments.filter(d => d.status === 'pending').length;
-    const expiredDocs = mockDocuments.filter(d => d.status === 'expired').length;
-    const rejectedDocs = mockDocuments.filter(d => d.status === 'rejected').length;
+    const total = data.length;
+    const active = data.filter(a => (a.status || a.statut) === 'active').length;
+    const complete = data.filter(a => a.completionRate === 100).length;
+    const incomplete = data.filter(a => a.completionRate < 100 && a.completionRate > 0).length;
+    const notStarted = data.filter(a => a.completionRate === 0).length;
+    
+    const pendingDocs = docs.filter(d => d.status === 'pending').length;
+    const expiredDocs = docs.filter(d => d.status === 'expired').length;
+    const rejectedDocs = docs.filter(d => d.status === 'rejected').length;
 
     return {
       total,
@@ -28,14 +56,20 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
       expiredDocs,
       rejectedDocs,
     };
-  }, []);
+  }, [associations, documents, loading]);
 
-  const incompleteAssociations = mockAssociations
+  const incompleteAssociations = (associations.length > 0 ? associations : mockAssociations)
     .filter(a => a.completionRate < 100)
     .sort((a, b) => a.completionRate - b.completionRate);
 
   return (
     <div className="space-y-6">
+      {/* Debug */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm">
+        <p>Données: {associations.length} associations chargées (mocks: {mockAssociations.length})</p>
+        <p>Source: {associations.length > 0 ? 'API Réelle' : 'Mocks'}</p>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-sm p-6">

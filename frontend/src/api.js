@@ -102,7 +102,14 @@ export const loginUser = async (username, password) => {
     localStorage.setItem('access_token', response.data.access);
     localStorage.setItem('refresh_token', response.data.refresh);
     
-    return response.data;
+    // Récupérer les infos de l'utilisateur
+    const userResponse = await api.get('/users/me/');
+    
+    return {
+      access: response.data.access,
+      refresh: response.data.refresh,
+      user: userResponse.data,
+    };
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
     throw error;

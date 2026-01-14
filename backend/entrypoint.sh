@@ -1,9 +1,7 @@
-#!/bin/bash
+﻿#!/bin/sh
 set -e
 
-
 echo "Waiting for database..."
-# loop until python can open a socket to the DB
 until python - <<'PY'
 import socket,sys,os
 h=os.environ.get('DB_HOST','db')
@@ -20,12 +18,8 @@ PY
 do
   echo "  still waiting..."
   sleep 1
-
-
-
 done
 
-# If a command is passed, run it (useful for one-off manage.py commands)
 if [ "$#" -gt 0 ]; then
   echo "Running passed command: $@"
   exec "$@"

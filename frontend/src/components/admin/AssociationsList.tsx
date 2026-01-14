@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Download, Mail, ChevronRight } from 'lucide-react';
 import { mockAssociations, Association } from '../../lib/mockData';
+import * as API from '../../api';
 
 interface AssociationsListProps {
   onSelectAssociation: (association: Association) => void;
@@ -13,9 +14,47 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [sortField, setSortField] = useState<SortField>('name');
+  const [associations, setAssociations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadAssociations = async () => {
+      try {
+        const data = await API.getAssociations();
+        console.log('Données brutes de l\'API:', data);
+        
+        // Gérer la pagination Django REST Framework
+        const assoArray = Array.isArray(data) ? data : (data?.results || []);
+        
+        console.log('Associations chargées:', assoArray);
+        // Convertir les données de la BDD au format attendu
+        const formatted = assoArray.map((asso: any) => ({
+          id: asso.id_association,
+          name: asso.nom_association,
+          ufr: asso.ufr,
+          type: asso.statut,
+          status: asso.statut,
+          president: 'Unknown',
+          memberCount: 0,
+          completionRate: 0,
+          missingDocuments: 0,
+          email: asso.email_contact,
+          phone: asso.tel_contact,
+        }));
+        console.log('Associations formatées:', formatted);
+        setAssociations(formatted);
+      } catch (error) {
+        console.error('Erreur:', error);
+        setAssociations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAssociations();
+  }, []);
 
   const filteredAndSortedAssociations = useMemo(() => {
-    let result = [...mockAssociations];
+    let result = [...associations];
 
     // Filter by search
     if (searchQuery) {
@@ -49,7 +88,7 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
     });
 
     return result;
-  }, [searchQuery, filterStatus, sortField]);
+  }, [searchQuery, filterStatus, sortField, associations]);
 
   const getCompletionColor = (rate: number) => {
     if (rate === 100) return 'text-green-700 bg-green-100';
@@ -74,6 +113,14 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
 
   return (
     <div className="space-y-6">
+      {loading && (
+        <div className="text-center py-8">
+          <p className="text-gray-600">Chargement des associations...</p>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
@@ -239,6 +286,8 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

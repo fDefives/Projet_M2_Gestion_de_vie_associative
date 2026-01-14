@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogOut, FileText, Users, Upload, AlertCircle, CheckCircle2, Clock, Download, Plus, Edit2, Trash2 } from 'lucide-react';
 import { User } from '../App';
 import { mockAssociations, mockDocuments, mockLeaders, DOCUMENT_TYPES, DocumentType } from '../lib/mockData';
 import { DocumentStatusBadge } from './shared/DocumentStatusBadge';
+import * as API from '../api';
 
 interface AssociationDashboardProps {
   user: User;
@@ -17,15 +18,67 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
   const [selectedDocType, setSelectedDocType] = useState<DocumentType>('statuts');
   const [showLeaderModal, setShowLeaderModal] = useState(false);
   const [editingLeader, setEditingLeader] = useState<any>(null);
+  const [association, setAssociation] = useState<any>(null);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Récupérer les données de l'association
-  const association = mockAssociations.find((a) => a.id === user.associationId);
-  const associationDocs = mockDocuments.filter((d) => d.associationId === user.associationId);
-  const associationLeaders = mockLeaders.filter((l) => l.associationId === user.associationId);
+  useEffect(() => {
+    const loadAssociation = async () => {
+      try {
+        const assos = await API.getAssociations();
+        if (assos && assos.length > 0) {
+          setAssociation(assos[0]);
+        }
+        const docs = await API.getDocuments();
+        setDocuments(docs || []);
+      } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAssociation();
+  }, []);
 
-  if (!association) {
-    return <div>Association non trouvée</div>;
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   }
+
+  // Si pas d'association, afficher un dashboard vide
+  if (!association) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-6xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Espace Association</h1>
+                <p className="text-sm text-gray-600">Bienvenue</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-gray-700">{user.email}</span>
+                <button
+                  onClick={onLogout}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <LogOut size={20} />
+                  Déconnexion
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-6xl mx-auto px-4 py-12">
+          <div className="bg-white rounded-lg shadow p-8 text-center">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Aucune association</h2>
+            <p className="text-gray-600">Vous n'avez pas encore créé d'association. Contactez l'administration.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const associationLeaders = mockLeaders.filter((l) => l.associationId === user.associationId);
 
   const handleUploadDocument = () => {
     console.log('Upload document:', selectedDocType);
@@ -133,14 +186,14 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
             {activeTab === 'overview' && (
               <AssociationOverviewTab
                 association={association}
-                documents={associationDocs}
+                documents={documents}
                 leaders={associationLeaders}
               />
             )}
 
             {activeTab === 'documents' && (
               <AssociationDocumentsTab
-                documents={associationDocs}
+                documents={documents}
                 onUpload={() => setShowUploadModal(true)}
               />
             )}

@@ -14,15 +14,24 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write('Initializing database...')
 
+        # Supprimer les anciennes données de test si l'admin existe
+        admin_existing = User.objects.filter(email='admin@example.com').first()
+        if admin_existing:
+            # Supprimer les associations liées
+            Association.objects.filter(id_utilisateur=admin_existing).delete()
+            # Supprimer l'admin
+            admin_existing.delete()
+
         # Créer un utilisateur admin (username = email pour cohérence avec la doc)
-        if not User.objects.filter(email='admin@example.com').exists():
-            admin = User.objects.create_superuser(
-                username='admin@example.com',
-                email='admin@example.com',
-                password='admin123',
-                role='admin'
-            )
-            self.stdout.write(self.style.SUCCESS('✓ Admin user created'))
+        admin = User.objects.create_superuser(
+            username='admin@example.com',
+            email='admin@example.com',
+            password='admin123'
+        )
+        admin.role = 'admin'
+        admin.is_staff = True
+        admin.save()
+        self.stdout.write(self.style.SUCCESS('✓ Admin user created'))
 
         # Créer des utilisateurs test
         test_users = [
@@ -53,6 +62,31 @@ class Command(BaseCommand):
                 id_utilisateur=admin_user
             )
             self.stdout.write(self.style.SUCCESS('✓ Association 1 created'))
+
+        # Créer des associations pour les utilisateurs test
+        user1 = User.objects.get(email='user1@example.com')
+        if not Association.objects.filter(nom_association='Association Étudiante User1').exists():
+            Association.objects.create(
+                nom_association='Association Étudiante User1',
+                ufr='UFR Lettres et Langues',
+                statut='active',
+                email_contact='user1@association.fr',
+                tel_contact='01111111111',
+                id_utilisateur=user1
+            )
+            self.stdout.write(self.style.SUCCESS('✓ Association User1 created'))
+
+        user2 = User.objects.get(email='user2@example.com')
+        if not Association.objects.filter(nom_association='Association Étudiante User2').exists():
+            Association.objects.create(
+                nom_association='Association Étudiante User2',
+                ufr='UFR Droit et Économie',
+                statut='active',
+                email_contact='user2@association.fr',
+                tel_contact='02222222222',
+                id_utilisateur=user2
+            )
+            self.stdout.write(self.style.SUCCESS('✓ Association User2 created'))
 
         # Créer des types de documents
         doc_types = [
