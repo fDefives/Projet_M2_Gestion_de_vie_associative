@@ -4,7 +4,6 @@ import { User } from '../App';
 import { AssociationsList } from './admin/AssociationsList';
 import { AssociationDetailView } from './admin/AssociationDetailView';
 import { StatsOverview } from './admin/StatsOverview';
-import { mockAssociations, Association } from '../lib/mockData';
 import * as API from '../api';
 
 interface AdminDashboardProps {

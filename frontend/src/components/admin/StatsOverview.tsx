@@ -1,7 +1,15 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2, Clock, TrendingUp, Users, FileText, AlertTriangle } from 'lucide-react';
-import { mockAssociations, mockDocuments, Association } from '../../lib/mockData';
 import * as API from '../../api';
+
+interface Association {
+  id: number;
+  name: string;
+  ufr: string;
+  status: string;
+  completionRate: number;
+  missingDocuments: number;
+}
 
 interface StatsOverviewProps {
   onSelectAssociation: (association: Association) => void;
@@ -33,8 +41,8 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
 
   const stats = useMemo(() => {
     console.log('Loading:', loading, 'Associations count:', associations.length);
-    const data = associations.length > 0 ? associations : mockAssociations;
-    const docs = documents.length > 0 ? documents : mockDocuments;
+    const data = associations;
+    const docs = documents;
     
     const total = data.length;
     const active = data.filter(a => (a.status || a.statut) === 'active').length;
@@ -58,19 +66,12 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
     };
   }, [associations, documents, loading]);
 
-  const incompleteAssociations = (associations.length > 0 ? associations : mockAssociations)
+  const incompleteAssociations = associations
     .filter(a => a.completionRate < 100)
     .sort((a, b) => a.completionRate - b.completionRate);
 
   return (
     <div className="space-y-6">
-      {/* Debug */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm">
-        <p>Données: {associations.length} associations chargées (mocks: {mockAssociations.length})</p>
-        <p>Source: {associations.length > 0 ? 'API Réelle' : 'Mocks'}</p>
-      </div>
-
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-2">

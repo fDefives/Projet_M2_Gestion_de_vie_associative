@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Download, Mail, ChevronRight } from 'lucide-react';
-import { mockAssociations, Association } from '../../lib/mockData';
 import * as API from '../../api';
 
 interface AssociationsListProps {

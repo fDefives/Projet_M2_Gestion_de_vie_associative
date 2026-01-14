@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Mail,
   Phone,
   Building2,
-  Users,
+  Users, 
   FileText,
   Upload,
   Download,
@@ -16,8 +16,24 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { Association, mockDocuments, mockLeaders, DOCUMENT_TYPES, DocumentType } from '../../lib/mockData';
 import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
+import * as API from '../../api';
+
+interface Association {
+  id: number;
+  name: string;
+  ufr: string;
+  status: string;
+}
+
+type DocumentType = 'statuts' | 'assurance' | 'budget' | 'rapport';
+
+const DOCUMENT_TYPES: Record<DocumentType, { label: string }> = {
+  statuts: { label: 'Statuts' },
+  assurance: { label: 'Assurance' },
+  budget: { label: 'Budget' },
+  rapport: { label: 'Rapport' },
+};
 
 interface AssociationDetailViewProps {
   association: Association;
@@ -32,9 +48,26 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [associationDocs, setAssociationDocs] = useState<any[]>([]);
+  const [associationLeaders, setAssociationLeaders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const associationDocs = mockDocuments.filter((d) => d.associationId === association.id);
-  const associationLeaders = mockLeaders.filter((l) => l.associationId === association.id);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const docs = await API.getDocuments();
+        setAssociationDocs(Array.isArray(docs) ? docs : docs?.results || []);
+        
+        // Load leaders from API if available
+        setAssociationLeaders([]);
+      } catch (error) {
+        console.error('Erreur:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [association.id]);
 
   const handleValidateDocument = (doc: any) => {
     setSelectedDocument(doc);

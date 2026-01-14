@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, FileText, Users, Upload, AlertCircle, CheckCircle2, Clock, Download, Plus, Edit2, Trash2 } from 'lucide-react';
 import { User } from '../App';
-import { mockAssociations, mockDocuments, mockLeaders, DOCUMENT_TYPES, DocumentType } from '../lib/mockData';
 import { DocumentStatusBadge } from './shared/DocumentStatusBadge';
 import * as API from '../api';
+
+type DocumentType = 'statuts' | 'assurance' | 'budget' | 'rapport';
+
+const DOCUMENT_TYPES: Record<DocumentType, { label: string }> = {
+  statuts: { label: 'Statuts' },
+  assurance: { label: 'Assurance' },
+  budget: { label: 'Budget' },
+  rapport: { label: 'Rapport' },
+};
 
 interface AssociationDashboardProps {
   user: User;
@@ -78,7 +86,7 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
     );
   }
 
-  const associationLeaders = mockLeaders.filter((l) => l.associationId === user.associationId);
+  const associationLeaders: any[] = [];
 
   const handleUploadDocument = () => {
     console.log('Upload document:', selectedDocType);
