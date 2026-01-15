@@ -30,13 +30,18 @@ export function DocumentsList(_props: DocumentsListProps) {
 
   const types = useMemo(() => {
     const s = new Set<string>();
-    documents.forEach((d) => d.type_document_name && s.add(d.type_document_name));
+    documents.forEach((d) => {
+      // Le champ peut être 'type_document_name' (du serializer) ou via la relation
+      const typeName = d.type_document_name || d.id_type_document?.libelle;
+      if (typeName) s.add(typeName);
+    });
     return Array.from(s).sort();
   }, [documents]);
 
   const statuses = useMemo(() => {
     const s = new Set<string>();
     documents.forEach((d) => {
+      // Les statuts possibles: draft, submitted, approved, rejected, expired
       const st = d.statut || d.status;
       if (st) s.add(st);
     });
@@ -45,12 +50,17 @@ export function DocumentsList(_props: DocumentsListProps) {
 
   const filtered = useMemo(() => {
     return documents.filter((d) => {
-      const typeMatch = filterType ? (d.type_document_name || '').toLowerCase() === filterType.toLowerCase() : true;
+      const typeMatch = filterType ? (d.type_document_name || d.id_type_document?.libelle || '').toLowerCase() === filterType.toLowerCase() : true;
       const statusVal = (d.statut || d.status || '').toLowerCase();
       const statusMatch = filterStatus ? statusVal === filterStatus.toLowerCase() : true;
-      const nameFields = [d.nom_association, d.association_name, d.association?.name, d.association?.nom, ''];
-      const assocName = nameFields.find(Boolean) || '';
-      const assocMatch = searchQuery ? (assocName || '').toLowerCase().includes(searchQuery.toLowerCase()) || (d.nom_fichier || '').toLowerCase().includes(searchQuery.toLowerCase()) : true;
+      
+      // Chercher par nom d'association (utiliser la clé correcte de la base)
+      const assocName = d.association?.nom_association || d.nom_association || '';
+      const assocMatch = searchQuery ? 
+        (assocName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (d.nom_fichier || '').toLowerCase().includes(searchQuery.toLowerCase()) : 
+        true;
+      
       return typeMatch && statusMatch && assocMatch;
     });
   }, [documents, filterType, filterStatus, searchQuery]);
@@ -112,18 +122,18 @@ export function DocumentsList(_props: DocumentsListProps) {
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-gray-900">{doc.nom_fichier || 'Fichier'}</h3>
-                    <span className="text-sm text-gray-500">{doc.type_document_name || 'Type non précisé'}</span>
+                    <span className="text-sm text-gray-500">{doc.type_document_name || (doc.id_type_document?.libelle) || 'Type non précisé'}</span>
                   </div>
 
                   <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span>{doc.nom_association || doc.association_name || doc.association?.name || 'Association inconnue'}</span>
+                    <span>{doc.association?.nom_association || doc.nom_association || 'Association inconnue'}</span>
                     <span>•</span>
                     <span>{doc.date_depot ? new Date(doc.date_depot).toLocaleDateString('fr-FR') : '—'}</span>
                   </div>
                 </div>
 
                 <div className="flex-shrink-0 text-right">
-                  <DocumentStatusBadge status={(doc.statut || doc.status || 'missing') as any} />
+                  <DocumentStatusBadge status={(doc.statut || doc.status || 'draft') as any} />
                 </div>
               </div>
 

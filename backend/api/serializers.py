@@ -9,7 +9,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
     """Serializer pour les utilisateurs"""
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'is_staff', 'first_name', 'last_name', 'is_active', 'created_at']
+        fields = ['id', 'username', 'email', 'is_staff', 'first_name', 'last_name', 'is_active', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 
@@ -20,7 +20,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'username', 'password', 'password2', 'first_name', 'last_name', 'role']
+        fields = ['email', 'username', 'password', 'password2', 'first_name', 'last_name']
 
     def validate(self, data):
         if data['password'] != data['password2']:

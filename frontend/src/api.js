@@ -409,6 +409,101 @@ export const deleteMember = async (id) => {
   }
 };
 
+// ============= ROLES ET MANDATS =============
+
+/**
+ * Récupérer les types de rôles disponibles
+ */
+export const getRoleTypes = async () => {
+  try {
+    const response = await api.get('/role-types/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des types de rôles:', error);
+    throw error;
+  }
+};
+
+/**
+ * Créer un type de rôle (Admin)
+ */
+export const createRoleType = async (roleData) => {
+  try {
+    const response = await api.post('/role-types/', roleData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la création du type de rôle:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les mandats
+ */
+export const getMandats = async () => {
+  try {
+    const response = await api.get('/mandats/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des mandats:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les mandats d'une association
+ */
+export const getAssociationMandats = async (associationId) => {
+  try {
+    const response = await api.get(`/mandats/`, {
+      params: { association_id: associationId },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des mandats:', error);
+    throw error;
+  }
+};
+
+/**
+ * Créer un mandat pour un membre
+ */
+export const createMandat = async (mandatData) => {
+  try {
+    const response = await api.post('/mandats/', mandatData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la création du mandat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mettre à jour un mandat
+ */
+export const updateMandat = async (id, mandatData) => {
+  try {
+    const response = await api.patch(`/mandats/${id}/`, mandatData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du mandat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprimer un mandat
+ */
+export const deleteMandat = async (id) => {
+  try {
+    const response = await api.delete(`/mandats/${id}/`);
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du mandat:', error);
+    throw error;
+  }
+};
+
 // ============= NOTIFICATIONS =============
 
 /**

@@ -4,13 +4,13 @@ from rest_framework import permissions
 class IsAdmin(permissions.BasePermission):
     """Permission pour les administrateurs uniquement"""
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'admin'
+        return request.user and request.user.is_authenticated and request.user.is_staff
 
 
 class IsUser(permissions.BasePermission):
     """Permission pour les utilisateurs standards"""
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'user'
+        return request.user and request.user.is_authenticated and not request.user.is_staff
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
@@ -18,14 +18,14 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return request.user and request.user.is_authenticated
-        return request.user and request.user.is_authenticated and request.user.role == 'admin'
+        return request.user and request.user.is_authenticated and request.user.is_staff
 
 
 class IsAssociationMemberOrAdmin(permissions.BasePermission):
     """Permission pour accéder aux documents de son association"""
     def has_object_permission(self, request, view, obj):
         # Admin voit tout
-        if request.user.role == 'admin':
+        if request.user.is_staff:
             return True
         
         # Utilisateur ne voit que ses documents
@@ -39,7 +39,7 @@ class IsDocumentOwnerOrAdmin(permissions.BasePermission):
     """Permission pour les documents - propriétaire ou admin"""
     def has_object_permission(self, request, view, obj):
         # Admin peut tout faire
-        if request.user.role == 'admin':
+        if request.user.is_staff:
             return True
         
         # Utilisateur ne peut modifier/supprimer que ses documents

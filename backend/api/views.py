@@ -72,7 +72,7 @@ class AssociationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtre les associations selon le rôle"""
         user = self.request.user
-        if user.role == 'admin':
+        if user.is_staff:
             return Association.objects.all()
         # Les utilisateurs ne voient que leur association
         return Association.objects.filter(id_utilisateur=user)
@@ -97,7 +97,6 @@ class AssociationViewSet(viewsets.ModelViewSet):
         new_user = User(
             email=email,
             username=candidate,
-            role='user',
             is_active=True,
         )
         new_user.set_password(password)
@@ -112,7 +111,7 @@ class AssociationViewSet(viewsets.ModelViewSet):
         documents = association.documents.all()
         
         # Si l'utilisateur n'est pas admin, il ne voit que ses documents
-        if request.user.role != 'admin':
+        if not request.user.is_staff:
             documents = documents.filter(id_association__id_utilisateur=request.user)
         
         serializer = DocumentSerializer(documents, many=True)
@@ -136,7 +135,7 @@ class MembreViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtre les membres selon le rôle"""
         user = self.request.user
-        if user.role == 'admin':
+        if user.is_staff:
             return Membre.objects.all()
         # Les utilisateurs ne voient que les membres de leur association
         return Membre.objects.filter(id_association__id_utilisateur=user)
@@ -160,7 +159,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         
-        if user.role == 'admin':
+        if user.is_staff:
             # L'admin voit tous les documents
             return Document.objects.all().select_related('id_association', 'id_type_document', 'uploaded_by')
         
@@ -176,7 +175,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def my_documents(self, request):
         """Récupère uniquement les documents de l'utilisateur connecté"""
-        if request.user.role == 'admin':
+        if request.user.is_staff:
             documents = Document.objects.all()
         else:
             documents = Document.objects.filter(id_association__id_utilisateur=request.user)
@@ -195,7 +194,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if request.user.role != 'admin':
+        if not request.user.is_staff:
             # Vérifie que l'utilisateur a accès à cette association
             association = Association.objects.filter(
                 id_association=association_id,
@@ -230,7 +229,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
     def approve(self, request, pk=None):
         """Approuve un document (Admin seulement)"""
-        if request.user.role != 'admin':
+        if not request.user.is_staff:
             return Response(
                 {"error": "Seuls les admins peuvent approuver"},
                 status=status.HTTP_403_FORBIDDEN
@@ -246,7 +245,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
     def reject(self, request, pk=None):
         """Rejette un document (Admin seulement)"""
-        if request.user.role != 'admin':
+        if not request.user.is_staff:
             return Response(
                 {"error": "Seuls les admins peuvent rejeter"},
                 status=status.HTTP_403_FORBIDDEN
@@ -265,7 +264,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         document = self.get_object()
         
         # Vérification des permissions
-        if request.user.role != 'admin' and document.id_association.id_utilisateur != request.user:
+        if not request.user.is_staff and document.id_association.id_utilisateur != request.user:
             return Response(
                 {"error": "Vous n'avez pas la permission de supprimer ce document"},
                 status=status.HTTP_403_FORBIDDEN
@@ -290,7 +289,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtre les notifications selon le rôle"""
         user = self.request.user
-        if user.role == 'admin':
+        if user.is_staff:
             return Notification.objects.all()
         # Les utilisateurs ne voient que les notifications de leur association
         return Notification.objects.filter(id_association__id_utilisateur=user)
