@@ -20,10 +20,10 @@ CREATE TABLE association (
 );
 
 CREATE TABLE membre (
-    id_membre SERIAL PRIMARY KEY,
-    prenom VARCHAR(100) NOT NULL,
-    nom VARCHAR(100) NOT NULL,
-    email VARCHAR(255),
+    _id_membre_ SERIAL PRIMARY KEY,
+    _prenom_ VARCHAR(100) NOT NULL,
+    _nom_ VARCHAR(100) NOT NULL,
+    _email_ VARCHAR(255),
     tel VARCHAR(20),
     date_adhesion DATE NOT NULL,
     statut_membre VARCHAR(50),

@@ -34,8 +34,9 @@ class AssociationAdmin(admin.ModelAdmin):
 
 @admin.register(Membre)
 class MembreAdmin(admin.ModelAdmin):
-    list_display = ['nom', 'prenom', 'statut_membre', 'id_association', 'date_adhesion']
-    list_filter = ['statut_membre', 'date_adhesion', 'id_association']
+    list_display = ('prenom', 'nom', 'email', 'statut_membre')
+    list_filter = ('statut_membre',)
+
     search_fields = ['nom', 'prenom', 'email']
     readonly_fields = ('date_adhesion', 'created_at', 'updated_at')
 
