@@ -22,7 +22,31 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return f"{self.email} ({self.get_role_display()})"
 
+class MemberType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
 
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='member_types_created'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+class AssociationType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
 class Association(models.Model):
     """Modèle association"""
     STATUS_CHOICES = [
@@ -34,6 +58,8 @@ class Association(models.Model):
     id_association = models.AutoField(primary_key=True)
     nom_association = models.CharField(max_length=255)
     date_creation_association = models.DateField(auto_now_add=True)
+    num_siret = models.CharField(max_length=14, blank=True, null=True)
+    desc_association = models.TextField(blank=True, null=True)
     ufr = models.CharField(max_length=100, blank=True, null=True)
     statut = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     email_contact = models.EmailField(blank=True, null=True)
@@ -42,7 +68,14 @@ class Association(models.Model):
     id_utilisateur = models.OneToOneField(CustomUser, on_delete=models.CASCADE, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+    association_type = models.ForeignKey(
+        AssociationType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='associations'
+    )
+
     class Meta:
         ordering = ['-created_at']
     
@@ -51,31 +84,43 @@ class Association(models.Model):
 
 
 class Membre(models.Model):
-    """Modèle membre d'association"""
     STATUS_CHOICES = [
         ('active', 'Actif'),
         ('inactive', 'Inactif'),
         ('pending', 'En attente'),
     ]
-    
+
     id_membre = models.AutoField(primary_key=True)
     prenom = models.CharField(max_length=100)
     nom = models.CharField(max_length=100)
+    date_of_birth = models.DateField(blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     tel = models.CharField(max_length=20, blank=True, null=True)
     date_adhesion = models.DateField(auto_now_add=True)
     statut_membre = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     date_fin_adhesion = models.DateField(blank=True, null=True)
-    id_association = models.ForeignKey(Association, on_delete=models.CASCADE, related_name='membres')
+
+    associations = models.ManyToManyField(
+        Association,
+        through='Mandat',
+        related_name='membres_via_mandat'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+    member_type = models.ForeignKey(
+        MemberType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='members'
+    )
+
     class Meta:
         ordering = ['-created_at']
-    
-    def __str__(self):
-        return f"{self.prenom} {self.nom} - {self.id_association}"
 
+    def __str__(self):
+        return f"{self.prenom} {self.nom}"
 
 class TypeDocument(models.Model):
     """Modèle type de document"""
@@ -132,14 +177,13 @@ class Document(models.Model):
 
 
 class Notification(models.Model):
-    """Modèle notification"""
     TYPE_CHOICES = [
         ('info', 'Information'),
         ('warning', 'Avertissement'),
         ('error', 'Erreur'),
         ('success', 'Succès'),
     ]
-    
+
     id_notification = models.AutoField(primary_key=True)
     date_envoi = models.DateTimeField(auto_now_add=True)
     sujet = models.CharField(max_length=255)
@@ -148,9 +192,48 @@ class Notification(models.Model):
     id_association = models.ForeignKey(Association, on_delete=models.CASCADE, related_name='notifications')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-date_envoi']
-    
+
     def __str__(self):
         return f"{self.sujet} - {self.id_association}"
+
+
+class Mandat(models.Model):
+    ROLE_CHOICES = [
+        ('president', 'Président'),
+        ('vice_president', 'Vice-président'),
+        ('tresorier', 'Trésorier'),
+        ('secretaire', 'Secrétaire'),
+        ('membre', 'Membre'),
+    ]
+
+    STATUS_CHOICES = [
+        ('active', 'Actif'),
+        ('termine', 'Terminé'),
+        ('suspendu', 'Suspendu'),
+    ]
+
+    id_mandat = models.AutoField(primary_key=True)
+    membre = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='mandats')
+    association = models.ForeignKey(Association, on_delete=models.CASCADE, related_name='mandats')
+
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES)
+    statut = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+
+    date_debut = models.DateField()
+    date_fin = models.DateField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date_debut']
+
+    def __str__(self):
+        return f"{self.membre} - {self.role} ({self.association})"
+
+
+
+
