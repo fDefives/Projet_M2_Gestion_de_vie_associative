@@ -174,6 +174,7 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
   
   const displayName = association.nom_association || association.name;
   const displayUFR = association.ufr;
+  const displaySiret = association.num_siret;
   const displayStatus = association.statut || association.status;
   const displayEmail = association.email_contact || association.email;
   const displayPhone = association.tel_contact || association.phone;
@@ -211,6 +212,10 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
               <div className="flex items-center gap-2 text-gray-600">
                 <Building2 className="w-4 h-4" />
                 <span>{displayUFR}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <FileText className="w-4 h-4" />
+                <span>{displaySiret || 'Non fourni'}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Mail className="w-4 h-4" />

@@ -4,10 +4,11 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 
-from .models import Association, Membre, TypeDocument, Document, Notification
+from .models import Association, AssociationType, Membre, TypeDocument, Document, Notification
 from .serializers import (
     CustomUserSerializer,
     CustomUserCreateSerializer,
+    AssociationTypeSerializer,
     AssociationSerializer,
     MembreSerializer,
     TypeDocumentSerializer,
@@ -308,3 +309,10 @@ class NotificationViewSet(viewsets.ModelViewSet):
         unread = queryset.filter(is_read=False)
         serializer = self.get_serializer(unread, many=True)
         return Response(serializer.data)
+
+
+class AssociationTypeViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les types d'associations"""
+    queryset = AssociationType.objects.all()
+    serializer_class = AssociationTypeSerializer
+    permission_classes = [IsAdminOrReadOnly]

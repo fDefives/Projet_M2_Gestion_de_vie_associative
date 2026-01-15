@@ -21,6 +21,8 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   const [newAsso, setNewAsso] = useState({
     nom_association: '',
     ufr: '',
+    num_siret: '',
+    date_creation_association: new Date().toISOString().split('T')[0],
     email_contact: '',
     tel_contact: '',
   });
@@ -29,6 +31,32 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
     password: '',
   });
   const [loading, setLoading] = useState(false);
+
+  // Fonctions de validation
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const isValidPhoneNumber = (phone: string): boolean => {
+    // Accepte les formats: 0612345678, +33612345678, 06 12 34 56 78, etc.
+    const phoneRegex = /^(?:(?:\+|00)33|0)[1-9](?:[0-9]{8})$/;
+    const cleanPhone = phone.replace(/[\s\-\.]/g, '');
+    return phoneRegex.test(cleanPhone);
+  };
+
+  const isValidSiret = (siret: string): boolean => {
+    // SIRET doit être exactement 14 chiffres
+    return /^\d{14}$/.test(siret);
+  };
+
+  const isValidDate = (date: string): boolean => {
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    return selectedDate <= today;
+  };
 
   const handleSelectAssociation = (association: Association) => {
     setSelectedAssociation(association);
@@ -39,8 +67,22 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
     setSelectedAssociation(null);
   };
 
+  const handleCancelCreate = () => {
+    setNewAsso({
+      nom_association: '',
+      ufr: '',
+      num_siret: '',
+      date_creation_association: new Date().toISOString().split('T')[0],
+      email_contact: '',
+      tel_contact: '',
+    });
+    setNewUser({ email: '', password: '' });
+    setShowCreateModal(false);
+  };
+
   const handleCreateAssociation = async () => {
-    if (!newAsso.nom_association || !newAsso.ufr || !newAsso.email_contact || !newAsso.tel_contact) {
+    // Vérifications basiques
+    if (!newAsso.nom_association || !newAsso.ufr || !newAsso.num_siret || !newAsso.date_creation_association || !newAsso.email_contact || !newAsso.tel_contact) {
       alert('Tous les champs association sont obligatoires');
       return;
     }
@@ -48,6 +90,38 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
       alert('Email et mot de passe du compte association sont obligatoires');
       return;
     }
+
+    // Validations spécifiques
+    if (!isValidEmail(newAsso.email_contact)) {
+      alert('Format d\'email de contact invalide. Exemple: contact@association.fr');
+      return;
+    }
+
+    if (!isValidEmail(newUser.email)) {
+      alert('Format d\'email utilisateur invalide. Exemple: user@mail.com');
+      return;
+    }
+
+    if (!isValidSiret(newAsso.num_siret)) {
+      alert('SIRET invalide. Le SIRET doit contenir exactement 14 chiffres.');
+      return;
+    }
+
+    if (!isValidPhoneNumber(newAsso.tel_contact)) {
+      alert('Numéro de téléphone invalide. Veuillez entrer un numéro français valide (ex: 0612345678 ou +33612345678).');
+      return;
+    }
+
+    if (!isValidDate(newAsso.date_creation_association)) {
+      alert('La date de création ne peut pas être dans le futur.');
+      return;
+    }
+
+    if (newUser.password.length < 8) {
+      alert('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+
     try {
       setLoading(true);
       const payload: any = {
@@ -61,6 +135,8 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
       setNewAsso({
         nom_association: '',
         ufr: '',
+        num_siret: '',
+        date_creation_association: new Date().toISOString().split('T')[0],
         email_contact: '',
         tel_contact: '',
       });
@@ -182,57 +258,84 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
             {/* Modal de création */}
             {showCreateModal && (
               <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}  >
-                <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+                <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Créer une association</h2>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Nom</label>
-                      <input
-                        type="text"
-                        value={newAsso.nom_association}
-                        onChange={(e) => setNewAsso({ ...newAsso, nom_association: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Nom de l'association"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">UFR</label>
-                      <input
-                        type="text"
-                        value={newAsso.ufr}
-                        onChange={(e) => setNewAsso({ ...newAsso, ufr: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="UFR Sciences"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email de contact</label>
-                      <input
-                        type="email"
-                        value={newAsso.email_contact}
-                        onChange={(e) => setNewAsso({ ...newAsso, email_contact: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="contact@association.fr"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-                      <input
-                        type="tel"
-                        value={newAsso.tel_contact}
-                        onChange={(e) => setNewAsso({ ...newAsso, tel_contact: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="01234567890"
-                      />
-                    </div>
-                    <div className="border-t border-gray-200 pt-4 space-y-3">
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Email utilisateur</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Nom</label>
+                          <input
+                            type="text"
+                            value={newAsso.nom_association}
+                            onChange={(e) => setNewAsso({ ...newAsso, nom_association: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Nom de l'association"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">UFR</label>
+                          <input
+                            type="text"
+                            value={newAsso.ufr}
+                            onChange={(e) => setNewAsso({ ...newAsso, ufr: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="UFR Sciences"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">SIRET</label>
+                          <input
+                            type="text"
+                            value={newAsso.num_siret}
+                            onChange={(e) => setNewAsso({ ...newAsso, num_siret: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="12345678901234"
+                            maxLength="14"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Date de création</label>
+                          <input
+                            type="date"
+                            value={newAsso.date_creation_association}
+                            onChange={(e) => setNewAsso({ ...newAsso, date_creation_association: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email de contact</label>
+                          <input
+                            type="email"
+                            value={newAsso.email_contact}
+                            onChange={(e) => setNewAsso({ ...newAsso, email_contact: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="contact@association.fr"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                          <input
+                            type="tel"
+                            value={newAsso.tel_contact}
+                            onChange={(e) => setNewAsso({ ...newAsso, tel_contact: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="01234567890"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2" style={{ marginTop: '5%' }}>Email utilisateur</label>
                           <input
                             type="email"
                             value={newUser.email}
@@ -242,7 +345,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2" style={{ marginTop: '5%' }}>Mot de passe</label>
                           <input
                             type="password"
                             value={newUser.password}
@@ -258,7 +361,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                     <div className="h-6" />
                     <div className="flex gap-4 mt-6">
                     <button
-                      onClick={() => setShowCreateModal(false)}
+                      onClick={handleCancelCreate}
                       className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                       disabled={loading}
                     >

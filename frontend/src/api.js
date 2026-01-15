@@ -171,6 +171,19 @@ export const getAssociations = async () => {
 };
 
 /**
+ * Récupérer la liste des types d'associations
+ */
+export const getAssociationTypes = async () => {
+  try {
+    const response = await api.get('/association-types/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des types d\'associations:', error);
+    throw error;
+  }
+};
+
+/**
  * Récupérer la liste des utilisateurs (réservé admin)
  */
 export const getUsers = async () => {
