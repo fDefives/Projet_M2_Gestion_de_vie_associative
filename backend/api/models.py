@@ -22,7 +22,31 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return f"{self.email} ({self.get_role_display()})"
 
+class MemberType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
 
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='member_types_created'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+class AssociationType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
 class Association(models.Model):
     """Modèle association"""
     STATUS_CHOICES = [
@@ -44,7 +68,14 @@ class Association(models.Model):
     id_utilisateur = models.OneToOneField(CustomUser, on_delete=models.CASCADE, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+    association_type = models.ForeignKey(
+        AssociationType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='associations'
+    )
+
     class Meta:
         ordering = ['-created_at']
     
@@ -77,6 +108,13 @@ class Membre(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    member_type = models.ForeignKey(
+        MemberType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='members'
+    )
 
     class Meta:
         ordering = ['-created_at']
@@ -195,3 +233,7 @@ class Mandat(models.Model):
 
     def __str__(self):
         return f"{self.membre} - {self.role} ({self.association})"
+
+
+
+

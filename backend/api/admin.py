@@ -83,3 +83,6 @@ class NotificationAdmin(admin.ModelAdmin):
         ('Type', {'fields': ('type', 'is_read')}),
         ('Dates', {'fields': ('date_envoi', 'created_at'), 'classes': ('collapse',)}),
     )
+class AssociationTypeAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return request.user.is_superuser
