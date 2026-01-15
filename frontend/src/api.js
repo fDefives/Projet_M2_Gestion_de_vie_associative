@@ -171,6 +171,19 @@ export const getAssociations = async () => {
 };
 
 /**
+ * Récupérer la liste des utilisateurs (réservé admin)
+ */
+export const getUsers = async () => {
+  try {
+    const response = await api.get('/users/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des utilisateurs:', error);
+    throw error;
+  }
+};
+
+/**
  * Créer une association
  */
 export const createAssociation = async (associationData) => {

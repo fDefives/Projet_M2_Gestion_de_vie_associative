@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { LogOut, Users, FileText, BarChart3, Settings, Search, Filter, Download, Mail, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogOut, Users, FileText, BarChart3, Settings, Plus } from 'lucide-react';
 import { User } from '../App';
 import { AssociationsList } from './admin/AssociationsList';
 import { AssociationDetailView } from './admin/AssociationDetailView';
@@ -23,6 +23,10 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
     email_contact: '',
     tel_contact: '',
   });
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSelectAssociation = (association: Association) => {
@@ -35,13 +39,23 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   };
 
   const handleCreateAssociation = async () => {
-    if (!newAsso.nom_association || !newAsso.ufr) {
-      alert('Veuillez remplir tous les champs');
+    if (!newAsso.nom_association || !newAsso.ufr || !newAsso.email_contact || !newAsso.tel_contact) {
+      alert('Tous les champs association sont obligatoires');
+      return;
+    }
+    if (!newUser.email || !newUser.password) {
+      alert('Email et mot de passe du compte association sont obligatoires');
       return;
     }
     try {
       setLoading(true);
-      await API.createAssociation(newAsso);
+      const payload: any = {
+        ...newAsso,
+        user_email: newUser.email,
+        user_password: newUser.password,
+      };
+
+      await API.createAssociation(payload);
       alert('Association créée avec succès!');
       setNewAsso({
         nom_association: '',
@@ -49,6 +63,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
         email_contact: '',
         tel_contact: '',
       });
+      setNewUser({ email: '', password: '' });
       setShowCreateModal(false);
       // Refresh associations list
       setCurrentView('associations');
@@ -165,7 +180,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
 
             {/* Modal de création */}
             {showCreateModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}  >
                 <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Créer une association</h2>
                   
@@ -193,7 +208,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email de contact</label>
                       <input
                         type="email"
                         value={newAsso.email_contact}
@@ -213,9 +228,34 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                         placeholder="01234567890"
                       />
                     </div>
+                    <div className="border-t border-gray-200 pt-4 space-y-3">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Email utilisateur</label>
+                          <input
+                            type="email"
+                            value={newUser.email}
+                            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="user@mail.com"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                          <input
+                            type="password"
+                            value={newUser.password}
+                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="********"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex gap-4 mt-8">
+                    <div className="h-6" />
+                    <div className="flex gap-4 mt-6">
                     <button
                       onClick={() => setShowCreateModal(false)}
                       className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"

@@ -153,16 +153,6 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-gray-900">Liste des associations</h2>
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300">
-              <Mail className="w-4 h-4" />
-              Envoyer un email
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300">
-              <Download className="w-4 h-4" />
-              Exporter
-            </button>
-          </div>
         </div>
 
         {/* Search and Filters */}

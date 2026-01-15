@@ -78,8 +78,32 @@ class AssociationViewSet(viewsets.ModelViewSet):
         return Association.objects.filter(id_utilisateur=user)
 
     def perform_create(self, serializer):
-        """Associe l'utilisateur à l'association à la création"""
-        serializer.save(id_utilisateur=self.request.user)
+        """Création association : crée systématiquement un utilisateur dédié (email + mot de passe obligatoires)."""
+        email = self.request.data.get('user_email') or self.request.data.get('email')
+        password = self.request.data.get('user_password') or self.request.data.get('password')
+        username_raw = self.request.data.get('user_username') or self.request.data.get('username')
+
+        if not email or not password:
+            raise serializers.ValidationError({'user': 'email et mot de passe sont obligatoires pour créer le compte associé'})
+
+        # Génère un username si absent (à partir de l'email) en garantissant l'unicité
+        base_username = username_raw or email.split('@')[0]
+        candidate = base_username
+        suffix = 1
+        while User.objects.filter(username=candidate).exists():
+            candidate = f"{base_username}{suffix}"
+            suffix += 1
+
+        new_user = User(
+            email=email,
+            username=candidate,
+            role='user',
+            is_active=True,
+        )
+        new_user.set_password(password)
+        new_user.save()
+
+        serializer.save(id_utilisateur=new_user)
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def documents(self, request, pk=None):
