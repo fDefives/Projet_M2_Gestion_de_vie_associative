@@ -4,35 +4,27 @@ from django.core.validators import FileExtensionValidator
 
 
 class CustomUser(AbstractUser):
-    """Modèle utilisateur personnalisé avec rôles"""
-    ROLE_CHOICES = [
-        ('admin', 'Administrateur'),
-        ('user', 'Utilisateur'),
-    ]
-    
     email = models.EmailField(unique=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
-    
-    def __str__(self):
-        return f"{self.email} ({self.get_role_display()})"
 
-class MemberType(models.Model):
+    def __str__(self):
+        return self.email
+
+
+class RoleType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    created_by = models.ForeignKey(
-        CustomUser,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='member_types_created'
-    )
+    def __str__(self):
+        return self.name
+
+
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -108,13 +100,7 @@ class Membre(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    member_type = models.ForeignKey(
-        MemberType,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='members'
-    )
+
 
     class Meta:
         ordering = ['-created_at']
@@ -201,14 +187,6 @@ class Notification(models.Model):
 
 
 class Mandat(models.Model):
-    ROLE_CHOICES = [
-        ('president', 'Président'),
-        ('vice_president', 'Vice-président'),
-        ('tresorier', 'Trésorier'),
-        ('secretaire', 'Secrétaire'),
-        ('membre', 'Membre'),
-    ]
-
     STATUS_CHOICES = [
         ('active', 'Actif'),
         ('termine', 'Terminé'),
@@ -219,7 +197,14 @@ class Mandat(models.Model):
     membre = models.ForeignKey(Membre, on_delete=models.CASCADE, related_name='mandats')
     association = models.ForeignKey(Association, on_delete=models.CASCADE, related_name='mandats')
 
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES)
+    role_type = models.ForeignKey(
+        RoleType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='mandats'
+    )
+
     statut = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
 
     date_debut = models.DateField()
@@ -232,7 +217,7 @@ class Mandat(models.Model):
         ordering = ['-date_debut']
 
     def __str__(self):
-        return f"{self.membre} - {self.role} ({self.association})"
+        return f"{self.membre} - {self.role_type} ({self.association})"
 
 
 
