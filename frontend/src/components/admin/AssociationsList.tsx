@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Download, Mail, ChevronRight } from 'lucide-react';
-import { mockAssociations, Association } from '../../lib/mockData';
 import * as API from '../../api';
 
 interface AssociationsListProps {
@@ -10,11 +9,14 @@ interface AssociationsListProps {
 type FilterStatus = 'all' | 'complete' | 'incomplete' | 'pending';
 type SortField = 'name' | 'completion' | 'missing';
 
+const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
+
 export function AssociationsList({ onSelectAssociation }: AssociationsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [associations, setAssociations] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +45,11 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
         }));
         console.log('Associations formatées:', formatted);
         setAssociations(formatted);
+
+        // Charger les documents pour savoir si un dossier existe vraiment
+        const docsData = await API.getDocuments();
+        const docsArray = Array.isArray(docsData) ? docsData : (docsData?.results || []);
+        setDocuments(docsArray);
       } catch (error) {
         console.error('Erreur:', error);
         setAssociations([]);
@@ -54,7 +61,28 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
   }, []);
 
   const filteredAndSortedAssociations = useMemo(() => {
-    let result = [...associations];
+    // Normalisation : un dossier sans aucun document n'est jamais complet
+    const docs = documents;
+    let result = associations.map((a) => {
+      // Récupérer les documents de cette association
+      const associationDocs = docs.filter((d) => d.id_association === a.id);
+      const hasDocs = associationDocs.length > 0;
+      
+      // Compter les documents validés par type requis
+      const validatedTypes = REQUIRED_DOCUMENT_TYPES.filter(type => {
+        return associationDocs.some(doc => 
+          doc.type_document_name?.toLowerCase() === type.toLowerCase() && 
+          (doc.statut === 'validated' || doc.status === 'validated')
+        );
+      });
+      
+      const validatedCount = validatedTypes.length;
+      const totalRequired = REQUIRED_DOCUMENT_TYPES.length;
+      const missingDocuments = totalRequired - validatedCount;
+      const completionRate = Math.round((validatedCount / totalRequired) * 100);
+      
+      return { ...a, completionRate, missingDocuments, hasDocs, validatedCount, totalRequired };
+    });
 
     // Filter by search
     if (searchQuery) {
@@ -68,11 +96,11 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
 
     // Filter by status
     if (filterStatus === 'complete') {
-      result = result.filter((a) => a.completionRate === 100);
+      result = result.filter((a) => a.completionRate === 100 && a.missingDocuments === 0 && a.hasDocs);
     } else if (filterStatus === 'incomplete') {
-      result = result.filter((a) => a.completionRate < 100 && a.completionRate > 0);
+      result = result.filter((a) => a.completionRate < 100 || a.missingDocuments > 0 || !a.hasDocs);
     } else if (filterStatus === 'pending') {
-      result = result.filter((a) => a.completionRate === 0);
+      result = result.filter((a) => a.completionRate === 0 || !a.hasDocs);
     }
 
     // Sort
@@ -190,9 +218,9 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
               className="w-full bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-gray-200 hover:border-blue-300"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-start gap-4 flex-1">
+                <div className="flex items-center gap-4 flex-1">
                   {/* Status indicator */}
-                  <div className="flex-shrink-0 mt-1">
+                  <div className="flex-shrink-0">
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center text-lg ${getCompletionColor(
                         association.completionRate
@@ -216,8 +244,6 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
 
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <span>{association.ufr}</span>
-                      <span>•</span>
-                      <span>{association.type}</span>
                       {association.siret && (
                         <>
                           <span>•</span>
@@ -241,21 +267,24 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
                   <div className="flex-shrink-0 text-right">
                     {association.missingDocuments > 0 ? (
                       <>
-                        <div className="text-orange-700">
+                        <div className="text-orange-700 font-semibold">
                           {association.missingDocuments} document(s)
                         </div>
                         <div className="text-sm text-gray-500">manquant(s)</div>
                       </>
                     ) : (
                       <>
-                        <div className="text-green-700">Complet</div>
+                        <div className="text-green-700 font-semibold">Complet</div>
                         <div className="text-sm text-gray-500">Tous les docs validés</div>
+                        <div className="text-xs text-green-600 mt-1">
+                          {association.totalRequired}/{association.totalRequired} requis
+                        </div>
                       </>
                     )}
                   </div>
 
                   {/* Arrow */}
-                  <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 mt-3" />
+                  <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 </div>
               </div>
 

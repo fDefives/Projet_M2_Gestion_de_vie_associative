@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, X, Clock, AlertCircle, FileX } from 'lucide-react';
-import { DocumentStatus } from '../../lib/mockData';
+
+type DocumentStatus = 'validated' | 'pending' | 'rejected' | 'expired' | 'missing';
 
 interface DocumentStatusBadgeProps {
   status: DocumentStatus;

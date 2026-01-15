@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Mail,
   Phone,
   Building2,
-  Users,
+  Users, 
   FileText,
   Upload,
   Download,
@@ -16,41 +16,149 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { Association, mockDocuments, mockLeaders, DOCUMENT_TYPES, DocumentType } from '../../lib/mockData';
 import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
+import * as API from '../../api';
+
+interface AssociationData {
+  id_association: number;
+  nom_association: string;
+  ufr: string;
+  statut: string;
+  email_contact: string;
+  tel_contact: string;
+  date_creation_association: string;
+}
+
+interface DocumentData {
+  id_document: number;
+  nom_fichier: string;
+  statut: 'validated' | 'pending' | 'rejected' | 'expired' | 'missing';
+  id_type_document: number;
+  type_document_name: string;
+  date_depot: string;
+  date_expiration: string;
+  uploaded_by_email: string;
+  commentaire_refus: string;
+}
+
+interface MembreData {
+  id_membre: number;
+  prenom: string;
+  nom: string;
+  email: string;
+  tel: string;
+  statut_membre: string;
+  date_adhesion: string;
+  date_fin_adhesion: string;
+}
+
+type DocumentStatus = 'validated' | 'pending' | 'rejected' | 'expired' | 'missing';
+type TabType = 'overview' | 'documents' | 'leaders' | 'history';
 
 interface AssociationDetailViewProps {
-  association: Association;
+  association: any;
   onBack: () => void;
 }
 
-type TabType = 'overview' | 'documents' | 'leaders' | 'history';
+const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
+
+const DOCUMENT_TYPES: Record<string, { label: string }> = {
+  statuts: { label: 'Statuts' },
+  assurance: { label: 'Assurance' },
+  budget: { label: 'Budget' },
+  rapport: { label: 'Rapport' },
+};
 
 export function AssociationDetailView({ association, onBack }: AssociationDetailViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [associationDocs, setAssociationDocs] = useState<DocumentData[]>([]);
+  const [associationMembers, setAssociationMembers] = useState<MembreData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const associationDocs = mockDocuments.filter((d) => d.associationId === association.id);
-  const associationLeaders = mockLeaders.filter((l) => l.associationId === association.id);
+  // Load association documents and members
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const handleValidateDocument = (doc: any) => {
+        // Load all documents and filter by association
+        const docsResponse = await API.getDocuments();
+        const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
+        const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
+        setAssociationDocs(filteredDocs);
+
+        // Load members for this association
+        setAssociationMembers([]);
+      } catch (err) {
+        console.error('Error loading association data:', err);
+        setError('Erreur lors du chargement des données');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [association.id_association || association.id]);
+
+  const handleValidateDocument = (doc: DocumentData) => {
     setSelectedDocument(doc);
     setShowValidationModal(true);
   };
 
-  const handleRejectDocument = () => {
-    console.log('Document rejected:', selectedDocument, rejectionReason);
-    setShowValidationModal(false);
-    setRejectionReason('');
+  const handleApproveDocument = async () => {
+    if (!selectedDocument) return;
+    try {
+      // Call API to approve document
+      console.log('Approving document:', selectedDocument.id_document);
+      // Reload documents
+      const docsResponse = await API.getDocuments();
+      const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
+      const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
+      setAssociationDocs(filteredDocs);
+      setShowValidationModal(false);
+    } catch (err) {
+      console.error('Error approving document:', err);
+    }
   };
 
-  const handleApproveDocument = () => {
-    console.log('Document approved:', selectedDocument);
-    setShowValidationModal(false);
+  const handleRejectDocument = async () => {
+    if (!selectedDocument || !rejectionReason.trim()) return;
+    try {
+      // Call API to reject document
+      console.log('Rejecting document:', selectedDocument.id_document, rejectionReason);
+      // Reload documents
+      const docsResponse = await API.getDocuments();
+      const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
+      const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
+      setAssociationDocs(filteredDocs);
+      setShowValidationModal(false);
+      setRejectionReason('');
+    } catch (err) {
+      console.error('Error rejecting document:', err);
+    }
   };
+
+  // Calculate completion rate and statistics
+  const documentStats = {
+    total: REQUIRED_DOCUMENT_TYPES.length,
+    validated: associationDocs.filter(d => d.statut === 'validated').length,
+    pending: associationDocs.filter(d => d.statut === 'pending').length,
+    rejected: associationDocs.filter(d => d.statut === 'rejected').length,
+    expired: associationDocs.filter(d => d.statut === 'expired').length,
+  };
+
+  const completionRate = Math.round((documentStats.validated / documentStats.total) * 100);
+  
+  const displayName = association.nom_association || association.name;
+  const displayUFR = association.ufr;
+  const displayStatus = association.statut || association.status;
+  const displayEmail = association.email_contact || association.email;
+  const displayPhone = association.tel_contact || association.phone;
 
   return (
     <div className="space-y-6">
@@ -67,49 +175,38 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
-              <h1 className="text-gray-900">{association.name}</h1>
-              {association.acronym && (
-                <span className="text-gray-500 text-xl">({association.acronym})</span>
-              )}
+              <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
               <span
-                className={`px-3 py-1 rounded-full text-sm ${
-                  association.status === 'active'
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  displayStatus === 'active'
                     ? 'bg-green-100 text-green-700'
-                    : association.status === 'dormant'
+                    : displayStatus === 'dormant'
                     ? 'bg-gray-100 text-gray-700'
                     : 'bg-blue-100 text-blue-700'
                 }`}
               >
-                {association.status === 'active' ? 'Active' : association.status === 'dormant' ? 'En sommeil' : 'En création'}
+                {displayStatus === 'active' ? 'Active' : displayStatus === 'dormant' ? 'En sommeil' : 'En création'}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center gap-2 text-gray-600">
                 <Building2 className="w-4 h-4" />
-                <span>{association.ufr}</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <FileText className="w-4 h-4" />
-                <span>{association.type}</span>
+                <span>{displayUFR}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Mail className="w-4 h-4" />
-                <span>{association.email}</span>
+                <span>{displayEmail}</span>
               </div>
-              {association.phone && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Phone className="w-4 h-4" />
-                  <span>{association.phone}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-gray-600">
+                <Phone className="w-4 h-4" />
+                <span>{displayPhone || 'Non fourni'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Clock className="w-4 h-4" />
+                <span>Créée le {new Date(association.date_creation_association || association.createdAt).toLocaleDateString('fr-FR')}</span>
+              </div>
             </div>
-
-            {association.siret && (
-              <div className="mt-3 text-sm text-gray-600">
-                <span>SIRET : {association.siret}</span>
-              </div>
-            )}
           </div>
 
           <div className="flex flex-col items-end gap-3">
@@ -130,18 +227,18 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
                 <div className="w-32 bg-gray-200 rounded-full h-3">
                   <div
                     className={`h-3 rounded-full ${
-                      association.completionRate === 100
+                      completionRate === 100
                         ? 'bg-green-500'
-                        : association.completionRate >= 75
+                        : completionRate >= 75
                         ? 'bg-yellow-500'
-                        : association.completionRate >= 50
+                        : completionRate >= 50
                         ? 'bg-orange-500'
                         : 'bg-red-500'
                     }`}
-                    style={{ width: `${association.completionRate}%` }}
+                    style={{ width: `${completionRate}%` }}
                   ></div>
                 </div>
-                <span className="text-gray-900">{association.completionRate}%</span>
+                <span className="text-gray-900 font-semibold">{completionRate}%</span>
               </div>
             </div>
           </div>
@@ -180,7 +277,7 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              Dirigeants ({associationLeaders.length})
+              Membres ({associationMembers.length})
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -197,25 +294,43 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
 
         {/* Tab Content */}
         <div className="p-6">
-          {activeTab === 'overview' && (
-            <OverviewTab
-              association={association}
-              documents={associationDocs}
-              leaders={associationLeaders}
-            />
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-4">Chargement des données...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-700">{error}</p>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'overview' && (
+                <OverviewTab
+                  association={association}
+                  documents={associationDocs}
+                  members={associationMembers}
+                  stats={documentStats}
+                  completionRate={completionRate}
+                />
+              )}
+
+              {activeTab === 'documents' && (
+                <DocumentsTab
+                  documents={associationDocs}
+                  onValidateDocument={handleValidateDocument}
+                />
+              )}
+
+              {activeTab === 'leaders' && (
+                <LeadersTab members={associationMembers} />
+              )}
+
+              {activeTab === 'history' && (
+                <HistoryTab associationId={association.id_association || association.id} />
+              )}
+            </>
           )}
-
-          {activeTab === 'documents' && (
-            <DocumentsTab
-              documents={associationDocs}
-              onValidateDocument={handleValidateDocument}
-              onUpload={() => setShowUploadModal(true)}
-            />
-          )}
-
-          {activeTab === 'leaders' && <LeadersTab leaders={associationLeaders} />}
-
-          {activeTab === 'history' && <HistoryTab associationId={association.id} />}
         </div>
       </div>
 
@@ -223,13 +338,16 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
       {showValidationModal && selectedDocument && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
-            <h2 className="text-gray-900 mb-4">Validation du document</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Validation du document</h2>
 
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Document</div>
-              <div className="text-gray-900">{selectedDocument.fileName}</div>
+              <div className="font-semibold text-gray-900">{selectedDocument.nom_fichier}</div>
               <div className="text-sm text-gray-600 mt-2">
-                Type : {DOCUMENT_TYPES[selectedDocument.type as DocumentType].label}
+                Type : {selectedDocument.type_document_name || 'Non spécifié'}
+              </div>
+              <div className="text-sm text-gray-600">
+                Déposé le {new Date(selectedDocument.date_depot).toLocaleDateString('fr-FR')}
               </div>
             </div>
 
@@ -243,7 +361,7 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
               </button>
 
               <div className="border-t border-gray-200 pt-4">
-                <label className="block text-gray-700 mb-2">Ou refuser avec un motif :</label>
+                <label className="block text-gray-700 font-medium mb-2">Ou refuser avec un motif :</label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
@@ -263,7 +381,10 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
             </div>
 
             <button
-              onClick={() => setShowValidationModal(false)}
+              onClick={() => {
+                setShowValidationModal(false);
+                setRejectionReason('');
+              }}
               className="w-full mt-4 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
               Annuler
@@ -277,96 +398,109 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
 
 // Sub-components for each tab
 
-function OverviewTab({ association, documents, leaders }: any) {
-  const requiredDocs = Object.keys(DOCUMENT_TYPES) as DocumentType[];
-  const documentStatus = requiredDocs.map((type) => {
-    const doc = documents.find((d: any) => d.type === type);
-    return {
-      type,
-      label: DOCUMENT_TYPES[type].label,
-      status: doc ? doc.status : 'missing',
-      doc,
-    };
-  });
+interface OverviewTabProps {
+  association: any;
+  documents: DocumentData[];
+  members: MembreData[];
+  stats: {
+    total: number;
+    validated: number;
+    pending: number;
+    rejected: number;
+    expired: number;
+  };
+  completionRate: number;
+}
 
-  const president = leaders.find((l: any) => l.role === 'president');
+function OverviewTab({ association, documents, members, stats, completionRate }: OverviewTabProps) {
+  const president = members.find((m) => m.statut_membre === 'president');
 
   return (
     <div className="space-y-6">
       {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-          <div className="text-sm text-green-700 mb-1">Documents validés</div>
-          <div className="text-green-900">
-            {documents.filter((d: any) => d.status === 'validated').length} / {requiredDocs.length}
-          </div>
+          <div className="text-sm text-green-700 font-medium mb-1">Documents validés</div>
+          <div className="text-2xl font-bold text-green-900">{stats.validated}</div>
+          <div className="text-xs text-green-600 mt-1">sur {stats.total} requis</div>
         </div>
-        <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-          <div className="text-sm text-orange-700 mb-1">En attente</div>
-          <div className="text-orange-900">
-            {documents.filter((d: any) => d.status === 'pending').length}
-          </div>
+        <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+          <div className="text-sm text-yellow-700 font-medium mb-1">En attente</div>
+          <div className="text-2xl font-bold text-yellow-900">{stats.pending}</div>
+          <div className="text-xs text-yellow-600 mt-1">À traiter</div>
         </div>
         <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-          <div className="text-sm text-red-700 mb-1">Action requise</div>
-          <div className="text-red-900">
-            {documents.filter((d: any) => d.status === 'rejected' || d.status === 'expired').length}
-          </div>
+          <div className="text-sm text-red-700 font-medium mb-1">Refusés</div>
+          <div className="text-2xl font-bold text-red-900">{stats.rejected}</div>
+          <div className="text-xs text-red-600 mt-1">À corriger</div>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+          <div className="text-sm text-purple-700 font-medium mb-1">Taux complet</div>
+          <div className="text-2xl font-bold text-purple-900">{completionRate}%</div>
+          <div className="text-xs text-purple-600 mt-1">Dossier</div>
         </div>
       </div>
 
       {/* President info */}
       {president && (
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <div className="flex items-center gap-2 text-blue-900 mb-2">
-            <Users className="w-4 h-4" />
-            <span>Président·e actuel·le</span>
+          <div className="flex items-center gap-2 text-blue-900 mb-3">
+            <Users className="w-5 h-5" />
+            <span className="font-semibold">Responsable actuel·le</span>
           </div>
-          <div className="text-blue-900">
-            {president.firstName} {president.lastName}
+          <div className="text-blue-900 font-semibold">
+            {president.prenom} {president.nom}
           </div>
           <div className="text-sm text-blue-700">{president.email}</div>
+          {president.tel && <div className="text-sm text-blue-700">{president.tel}</div>}
           <div className="text-sm text-blue-700">
-            En fonction depuis le {new Date(president.startDate).toLocaleDateString('fr-FR')}
+            Depuis le {new Date(president.date_adhesion).toLocaleDateString('fr-FR')}
           </div>
         </div>
       )}
 
       {/* Document checklist */}
       <div>
-        <h3 className="text-gray-900 mb-4">État des documents requis</h3>
+        <h3 className="text-gray-900 font-semibold mb-4">État des documents requis</h3>
         <div className="space-y-2">
-          {documentStatus.map((item) => (
-            <div
-              key={item.type}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <DocumentStatusBadge status={item.status} />
-                <span className="text-gray-900">{item.label}</span>
-              </div>
-              {item.doc && (
-                <div className="text-sm text-gray-600">
-                  Déposé le {new Date(item.doc.uploadedAt).toLocaleDateString('fr-FR')}
+          {REQUIRED_DOCUMENT_TYPES.map((type) => {
+            const doc = documents.find(d => d.type_document_name?.toLowerCase() === type.toLowerCase());
+            const status = doc?.statut || 'missing';
+            
+            return (
+              <div
+                key={type}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <DocumentStatusBadge status={status as DocumentStatus} />
+                  <span className="text-gray-900 font-medium">{DOCUMENT_TYPES[type]?.label || type}</span>
                 </div>
-              )}
-            </div>
-          ))}
+                {doc && (
+                  <div className="text-sm text-gray-600">
+                    Déposé le {new Date(doc.date_depot).toLocaleDateString('fr-FR')}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
 
-function DocumentsTab({ documents, onValidateDocument, onUpload }: any) {
+interface DocumentsTabProps {
+  documents: DocumentData[];
+  onValidateDocument: (doc: DocumentData) => void;
+}
+
+function DocumentsTab({ documents, onValidateDocument }: DocumentsTabProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-gray-900">Gestion des documents</h3>
-        <button
-          onClick={onUpload}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-        >
+        <h3 className="text-lg font-semibold text-gray-900">Gestion des documents</h3>
+        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
           <Upload className="w-4 h-4" />
           Importer un document
         </button>
@@ -379,24 +513,24 @@ function DocumentsTab({ documents, onValidateDocument, onUpload }: any) {
         </div>
       ) : (
         <div className="space-y-2">
-          {documents.map((doc: any) => (
+          {documents.map((doc) => (
             <div
-              key={doc.id}
+              key={doc.id_document}
               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <div className="flex items-center gap-4 flex-1">
-                <DocumentStatusBadge status={doc.status} />
+                <DocumentStatusBadge status={doc.statut as DocumentStatus} />
                 <div className="flex-1">
-                  <div className="text-gray-900">{doc.fileName}</div>
+                  <div className="text-gray-900 font-medium">{doc.nom_fichier}</div>
                   <div className="text-sm text-gray-600">
-                    {DOCUMENT_TYPES[doc.type as DocumentType].label}
+                    {doc.type_document_name}
                   </div>
                   <div className="text-sm text-gray-500">
-                    Déposé le {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')} par {doc.uploadedBy}
+                    Déposé le {new Date(doc.date_depot).toLocaleDateString('fr-FR')} par {doc.uploaded_by_email}
                   </div>
-                  {doc.rejectionReason && (
+                  {doc.commentaire_refus && (
                     <div className="text-sm text-red-600 mt-1">
-                      Motif de refus : {doc.rejectionReason}
+                      Motif de refus : {doc.commentaire_refus}
                     </div>
                   )}
                 </div>
@@ -406,12 +540,12 @@ function DocumentsTab({ documents, onValidateDocument, onUpload }: any) {
                 <button className="p-2 text-gray-600 hover:bg-white rounded-lg transition-colors">
                   <Download className="w-4 h-4" />
                 </button>
-                {doc.status === 'pending' && (
+                {doc.statut === 'pending' && (
                   <button
                     onClick={() => onValidateDocument(doc)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
                   >
-                    Valider / Refuser
+                    Traiter
                   </button>
                 )}
               </div>
@@ -423,49 +557,56 @@ function DocumentsTab({ documents, onValidateDocument, onUpload }: any) {
   );
 }
 
-function LeadersTab({ leaders }: any) {
-  const roleLabels = {
+interface LeadersTabProps {
+  members: MembreData[];
+}
+
+function LeadersTab({ members }: LeadersTabProps) {
+  const roleLabels: Record<string, string> = {
     president: 'Président·e',
     treasurer: 'Trésorier·e',
     secretary: 'Secrétaire',
     member: 'Membre',
+    responsable: 'Responsable',
   };
+
+  const activeMembers = members.filter(m => m.statut_membre !== 'ancien');
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-gray-900">Bureau de l'association</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Bureau et membres</h3>
         <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
           <Plus className="w-4 h-4" />
-          Ajouter un dirigeant
+          Ajouter un membre
         </button>
       </div>
 
-      {leaders.length === 0 ? (
+      {activeMembers.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600">Aucun dirigeant déclaré</p>
+          <p className="text-gray-600">Aucun membre déclaré</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {leaders.map((leader: any) => (
+          {activeMembers.map((member) => (
             <div
-              key={leader.id}
+              key={member.id_membre}
               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <Users className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <div className="text-gray-900">
-                    {leader.firstName} {leader.lastName}
+                  <div className="text-gray-900 font-medium">
+                    {member.prenom} {member.nom}
                   </div>
-                  <div className="text-sm text-gray-600">{roleLabels[leader.role as keyof typeof roleLabels]}</div>
-                  <div className="text-sm text-gray-500">{leader.email}</div>
-                  {leader.phone && <div className="text-sm text-gray-500">{leader.phone}</div>}
+                  <div className="text-sm text-gray-600">{roleLabels[member.statut_membre] || member.statut_membre}</div>
+                  <div className="text-sm text-gray-500">{member.email}</div>
+                  {member.tel && <div className="text-sm text-gray-500">{member.tel}</div>}
                   <div className="text-sm text-gray-500">
-                    En fonction depuis le {new Date(leader.startDate).toLocaleDateString('fr-FR')}
+                    Depuis le {new Date(member.date_adhesion).toLocaleDateString('fr-FR')}
                   </div>
                 </div>
               </div>
@@ -486,34 +627,25 @@ function LeadersTab({ leaders }: any) {
   );
 }
 
-function HistoryTab({ associationId }: any) {
+interface HistoryTabProps {
+  associationId: number;
+}
+
+function HistoryTab({ associationId }: HistoryTabProps) {
+  // For now, using placeholder history
   const mockHistory = [
     {
       id: '1',
-      date: '2024-12-20T16:45:00',
-      action: 'Document déposé',
-      details: 'Charte universitaire 2024.pdf',
-      user: 'Thomas Leroy',
-    },
-    {
-      id: '2',
-      date: '2024-09-15T14:30:00',
-      action: 'Document refusé',
-      details: 'PV AG 2024.pdf - Document non signé',
-      user: 'Marie Goupille Bergère',
-    },
-    {
-      id: '3',
-      date: '2024-01-22T09:10:00',
-      action: 'Document validé',
-      details: 'Liste bureau 2024.pdf',
-      user: 'Marie Goupille Bergère',
+      date: new Date().toISOString(),
+      action: 'Fiche créée',
+      details: 'Fiche association créée dans le système',
+      user: 'Admin',
     },
   ];
 
   return (
     <div className="space-y-4">
-      <h3 className="text-gray-900">Historique des actions</h3>
+      <h3 className="text-lg font-semibold text-gray-900">Historique des actions</h3>
 
       <div className="space-y-3">
         {mockHistory.map((entry) => (
@@ -522,7 +654,7 @@ function HistoryTab({ associationId }: any) {
               <Clock className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex-1">
-              <div className="text-gray-900">{entry.action}</div>
+              <div className="text-gray-900 font-medium">{entry.action}</div>
               <div className="text-sm text-gray-600">{entry.details}</div>
               <div className="text-sm text-gray-500 mt-1">
                 Par {entry.user} • {new Date(entry.date).toLocaleDateString('fr-FR')} à{' '}

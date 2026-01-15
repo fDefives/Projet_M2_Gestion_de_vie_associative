@@ -69,7 +69,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="admin ou user1"
+                placeholder="email@example.com"
                 required
                 disabled={loading}
               />
@@ -100,50 +100,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
           </form>
-        </div>
-
-        {/* Test Users */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-blue-900">💡</span>
-            </div>
-            <div>
-              <p className="text-blue-900 mb-1">Comptes de test disponibles</p>
-              <p className="text-blue-800 text-sm">
-                Cliquez sur un compte pour vous connecter
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <button
-              onClick={() => quickLogin('admin', 'admin123')}
-              disabled={loading}
-              className="w-full bg-white hover:bg-blue-50 disabled:opacity-50 border border-blue-300 text-blue-900 py-2 px-4 rounded-lg transition-colors text-left text-sm"
-            >
-              <span className="font-medium">👨‍💼 Admin</span>
-              <span className="text-blue-700 block text-xs">admin / admin123</span>
-            </button>
-
-            <button
-              onClick={() => quickLogin('user1', 'pass123')}
-              disabled={loading}
-              className="w-full bg-white hover:bg-blue-50 disabled:opacity-50 border border-blue-300 text-blue-900 py-2 px-4 rounded-lg transition-colors text-left text-sm"
-            >
-              <span className="font-medium">🎓 User 1</span>
-              <span className="text-blue-700 block text-xs">user1 / pass123</span>
-            </button>
-
-            <button
-              onClick={() => quickLogin('user2', 'pass123')}
-              disabled={loading}
-              className="w-full bg-white hover:bg-blue-50 disabled:opacity-50 border border-blue-300 text-blue-900 py-2 px-4 rounded-lg transition-colors text-left text-sm"
-            >
-              <span className="font-medium">🎓 User 2</span>
-              <span className="text-blue-700 block text-xs">user2 / pass123</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>
