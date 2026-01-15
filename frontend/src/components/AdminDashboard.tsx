@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LogOut, Users, FileText, BarChart3, Settings, Plus } from 'lucide-react';
+import DocumentsList from './admin/DocumentsList';
 import { User } from '../App';
 import { AssociationsList } from './admin/AssociationsList';
 import { AssociationDetailView } from './admin/AssociationDetailView';
@@ -283,10 +284,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
             )}
 
             {currentView === 'documents' && !selectedAssociation && (
-              <div className="bg-white rounded-xl shadow-sm p-8">
-                <h2 className="text-gray-900 mb-4">Gestion des documents</h2>
-                <p className="text-gray-600">Vue en cours de développement...</p>
-              </div>
+              <DocumentsList />
             )}
 
             {currentView === 'settings' && (

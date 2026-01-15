@@ -216,7 +216,7 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
                   </div>
                   
                   <div className="text-left">
-                    <div className="text-gray-900">{association.name}</div>
+                    <div className="text-gray-900">{association.nom_association}</div>
                     <div className="text-sm text-gray-500">{association.ufr}</div>
                   </div>
                 </div>
