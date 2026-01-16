@@ -37,7 +37,13 @@ services:
       DB_PASSWORD: postgres
       DB_HOST: db
       DB_PORT: 5432
-    # Note: the container image's ENTRYPOINT handles migrations and runserver
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      python manage.py init_full_data &&
+      python manage.py runserver 0.0.0.0:8000
+      "
+  
 
   frontend:
     build: ./frontend

@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from .models import (
     CustomUser,
     Association,
@@ -10,6 +11,7 @@ from .models import (
     Mandat,
     RoleType
 )
+
 
 
 # =========================

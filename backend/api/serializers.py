@@ -49,13 +49,18 @@ class AssociationSerializer(serializers.ModelSerializer):
 
 
 class MembreSerializer(serializers.ModelSerializer):
-    """Serializer pour les membres"""
+    associations = serializers.StringRelatedField(
+        many=True,
+        source='associations'
+    )
+
     class Meta:
         model = Membre
-        fields = ['id_membre', 'prenom', 'nom', 'email', 'tel', 'date_adhesion',
-                  'statut_membre', 'date_fin_adhesion', 'id_association', 'created_at', 'updated_at']
-        read_only_fields = ['id_membre', 'date_adhesion', 'created_at', 'updated_at']
-
+        fields = [
+            'id_membre', 'prenom', 'nom', 'email', 'tel',
+            'date_adhesion', 'statut_membre', 'date_fin_adhesion',
+            'associations', 'created_at', 'updated_at'
+        ]
 
 class TypeDocumentSerializer(serializers.ModelSerializer):
     """Serializer pour les types de documents"""
