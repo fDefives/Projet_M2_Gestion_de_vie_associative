@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Association, Membre, TypeDocument, Document, Notification
+from .models import Association, AssociationType, Membre, TypeDocument, Document, Notification
 
 User = get_user_model()
 
@@ -36,16 +36,25 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
         return user
 
 
+class AssociationTypeSerializer(serializers.ModelSerializer):
+    """Serializer pour les types d'associations"""
+    class Meta:
+        model = AssociationType
+        fields = ['id', 'name', 'description', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
 class AssociationSerializer(serializers.ModelSerializer):
     """Serializer pour les associations"""
     user_email = serializers.CharField(source='id_utilisateur.email', read_only=True)
+    association_type_name = serializers.CharField(source='association_type.name', read_only=True)
 
     class Meta:
         model = Association
         fields = ['id_association', 'nom_association', 'date_creation_association', 'ufr',
-                  'statut', 'email_contact', 'insta_contact', 'tel_contact', 'id_utilisateur',
-                  'user_email', 'created_at', 'updated_at']
-        read_only_fields = ['id_association', 'date_creation_association', 'created_at', 'updated_at']
+                  'statut', 'email_contact', 'insta_contact', 'tel_contact', 'num_siret',
+                  'association_type', 'association_type_name', 'id_utilisateur', 'user_email', 'created_at', 'updated_at']
+        read_only_fields = ['id_association', 'created_at', 'updated_at']
 
 
 class MembreSerializer(serializers.ModelSerializer):

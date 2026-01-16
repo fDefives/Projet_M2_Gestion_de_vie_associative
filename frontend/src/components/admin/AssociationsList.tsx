@@ -14,13 +14,15 @@ const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
 export function AssociationsList({ onSelectAssociation }: AssociationsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [filterAssociationType, setFilterAssociationType] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [associations, setAssociations] = useState<any[]>([]);
+  const [associationTypes, setAssociationTypes] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadAssociations = async () => {
+    const loadData = async () => {
       try {
         const data = await API.getAssociations();
         console.log('Données brutes de l\'API:', data);
@@ -36,15 +38,25 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
           ufr: asso.ufr,
           type: asso.statut,
           status: asso.statut,
+          associationType: asso.association_type,
+          associationTypeName: asso.association_type_name,
           president: 'Unknown',
           memberCount: 0,
           completionRate: 0,
           missingDocuments: 0,
           email: asso.email_contact,
           phone: asso.tel_contact,
+          siret: asso.num_siret,
         }));
         console.log('Associations formatées:', formatted);
         setAssociations(formatted);
+
+        // Charger les types d'associations
+        const typesData = await API.getAssociationTypes();
+        console.log('Données brutes types:', typesData);
+        const typesArray = Array.isArray(typesData) ? typesData : (typesData?.results || []);
+        console.log('Types formatés:', typesArray);
+        setAssociationTypes(typesArray);
 
         // Charger les documents pour savoir si un dossier existe vraiment
         const docsData = await API.getDocuments();
@@ -53,11 +65,12 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
       } catch (error) {
         console.error('Erreur:', error);
         setAssociations([]);
+        setAssociationTypes([]);
       } finally {
         setLoading(false);
       }
     };
-    loadAssociations();
+    loadData();
   }, []);
 
   const filteredAndSortedAssociations = useMemo(() => {
@@ -103,6 +116,11 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
       result = result.filter((a) => a.completionRate === 0 || !a.hasDocs);
     }
 
+    // Filter by association type
+    if (filterAssociationType !== 'all') {
+      result = result.filter((a) => a.associationType === parseInt(filterAssociationType));
+    }
+
     // Sort
     result.sort((a, b) => {
       if (sortField === 'name') {
@@ -116,7 +134,7 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
     });
 
     return result;
-  }, [searchQuery, filterStatus, sortField, associations]);
+  }, [searchQuery, filterStatus, filterAssociationType, sortField, associations]);
 
   const getCompletionColor = (rate: number) => {
     if (rate === 100) return 'text-green-700 bg-green-100';
@@ -180,6 +198,19 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
           </select>
 
           <select
+            value={filterAssociationType}
+            onChange={(e) => setFilterAssociationType(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Tous les types</option>
+            {associationTypes.map((type: any) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
+          </select>
+
+          <select
             value={sortField}
             onChange={(e) => setSortField(e.target.value as SortField)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -237,7 +268,7 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
                       {association.siret && (
                         <>
                           <span>•</span>
-                          <span>SIRET : {association.siret}</span>
+                          <span>{association.siret}</span>
                         </>
                       )}
                     </div>
