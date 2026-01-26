@@ -1,5 +1,4 @@
 from django.contrib import admin
-
 from .models import (
     CustomUser,
     Association,
@@ -11,8 +10,6 @@ from .models import (
     Mandat,
     RoleType
 )
-
-
 
 # =========================
 # USERS
@@ -42,7 +39,6 @@ class CustomUserAdmin(admin.ModelAdmin):
         }),
     )
 
-
 # =========================
 # ASSOCIATIONS
 # =========================
@@ -52,7 +48,6 @@ class AssociationAdmin(admin.ModelAdmin):
     list_filter = ['statut', 'association_type', 'created_at']
     search_fields = ['nom_association', 'email_contact']
     readonly_fields = ('date_creation_association', 'created_at', 'updated_at')
-
     fieldsets = (
         (None, {
             'fields': (
@@ -86,11 +81,9 @@ class AssociationAdmin(admin.ModelAdmin):
         }),
     )
 
-
 @admin.register(AssociationType)
 class AssociationTypeAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_at')
-
 
 # =========================
 # MEMBRES
@@ -111,7 +104,6 @@ class MembreAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-
 
 # =========================
 # TYPES DE RÔLE
@@ -161,7 +153,6 @@ class DocumentAdmin(admin.ModelAdmin):
         ('Utilisateur', {'fields': ('uploaded_by',), 'classes': ('collapse',)}),
         ('Métadonnées', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
-
 
 # =========================
 # NOTIFICATIONS
