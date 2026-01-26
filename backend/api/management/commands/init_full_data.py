@@ -20,7 +20,7 @@ class Command(BaseCommand):
         # ------------------------
         User.objects.filter(email='admin@example.com').delete()
 
-        admin = User.objects.create_superuser(
+        User.objects.create_superuser(
             username='admin@example.com',
             email='admin@example.com',
             password='admin123',
