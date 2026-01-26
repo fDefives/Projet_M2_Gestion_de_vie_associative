@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -85,7 +85,8 @@ class AssociationViewSet(viewsets.ModelViewSet):
         username_raw = self.request.data.get('user_username') or self.request.data.get('username')
 
         if not email or not password:
-            raise serializers.ValidationError({'user': 'email et mot de passe sont obligatoires pour créer le compte associé'})
+            raise serializers.ValidationError(
+            {'user': 'email et mot de passe sont obligatoires pour créer le compte associé'})
 
         # Génère un username si absent (à partir de l'email) en garantissant l'unicité
         base_username = username_raw or email.split('@')[0]
