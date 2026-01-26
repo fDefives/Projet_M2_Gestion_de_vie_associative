@@ -4,6 +4,7 @@ import * as API from '../../api';
 
 interface AssociationsListProps {
   onSelectAssociation: (association: Association) => void;
+  refreshKey?: number;
 }
 
 type FilterStatus = 'all' | 'complete' | 'incomplete' | 'pending';
@@ -11,7 +12,7 @@ type SortField = 'name' | 'completion' | 'missing';
 
 const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
 
-export function AssociationsList({ onSelectAssociation }: AssociationsListProps) {
+export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: AssociationsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterAssociationType, setFilterAssociationType] = useState<string>('all');
@@ -71,7 +72,7 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
       }
     };
     loadData();
-  }, []);
+  }, [refreshKey]);
 
   const filteredAndSortedAssociations = useMemo(() => {
     // Normalisation : un dossier sans aucun document n'est jamais complet
@@ -80,21 +81,22 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
       // Récupérer les documents de cette association
       const associationDocs = docs.filter((d) => d.id_association === a.id);
       const hasDocs = associationDocs.length > 0;
-      
-      // Compter les documents validés par type requis
-      const validatedTypes = REQUIRED_DOCUMENT_TYPES.filter(type => {
-        return associationDocs.some(doc => 
-          doc.type_document_name?.toLowerCase() === type.toLowerCase() && 
-          (doc.statut === 'validated' || doc.status === 'validated')
+
+      // Compter les documents approuvés par type requis
+      const approvedTypes = REQUIRED_DOCUMENT_TYPES.filter((type) => {
+        return associationDocs.some(
+          (doc) =>
+            doc.type_document_name?.toLowerCase().includes(type.toLowerCase()) &&
+            doc.statut === 'approved'
         );
       });
-      
-      const validatedCount = validatedTypes.length;
+
+      const approvedCount = approvedTypes.length;
       const totalRequired = REQUIRED_DOCUMENT_TYPES.length;
-      const missingDocuments = totalRequired - validatedCount;
-      const completionRate = Math.round((validatedCount / totalRequired) * 100);
-      
-      return { ...a, completionRate, missingDocuments, hasDocs, validatedCount, totalRequired };
+      const missingDocuments = Math.max(totalRequired - approvedCount, 0);
+      const completionRate = Math.round((approvedCount / totalRequired) * 100);
+
+      return { ...a, completionRate, missingDocuments, hasDocs, validatedCount: approvedCount, totalRequired };
     });
 
     // Filter by search
@@ -109,11 +111,11 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
 
     // Filter by status
     if (filterStatus === 'complete') {
-      result = result.filter((a) => a.completionRate === 100 && a.missingDocuments === 0 && a.hasDocs);
+      result = result.filter((a) => a.hasDocs && a.completionRate === 100);
     } else if (filterStatus === 'incomplete') {
-      result = result.filter((a) => a.completionRate < 100 || a.missingDocuments > 0 || !a.hasDocs);
+      result = result.filter((a) => a.hasDocs && a.completionRate < 100);
     } else if (filterStatus === 'pending') {
-      result = result.filter((a) => a.completionRate === 0 || !a.hasDocs);
+      result = result.filter((a) => !a.hasDocs);
     }
 
     // Filter by association type
@@ -134,7 +136,7 @@ export function AssociationsList({ onSelectAssociation }: AssociationsListProps)
     });
 
     return result;
-  }, [searchQuery, filterStatus, filterAssociationType, sortField, associations]);
+  }, [searchQuery, filterStatus, filterAssociationType, sortField, associations, documents]);
 
   const getCompletionColor = (rate: number) => {
     if (rate === 100) return 'text-green-700 bg-green-100';

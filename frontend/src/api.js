@@ -223,6 +223,19 @@ export const getAssociationDetails = async (id) => {
 };
 
 /**
+ * Mettre à jour une association
+ */
+export const updateAssociation = async (id, associationData) => {
+  try {
+    const response = await api.patch(`/associations/${id}/`, associationData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de l\'association:', error);
+    throw error;
+  }
+};
+
+/**
  * Récupérer les documents d'une association
  */
 export const getAssociationDocuments = async (id) => {
@@ -339,6 +352,45 @@ export const getDocumentDetails = async (id) => {
 };
 
 /**
+ * Télécharger un document
+ */
+export const downloadDocument = async (id, filename) => {
+  try {
+    const response = await api.get(`/documents/${id}/download/`, {
+      responseType: 'blob',
+    });
+    
+    // Créer un lien de téléchargement et le cliquer
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors du téléchargement du document:', error);
+    throw error;
+  }
+};
+
+// Récupérer le binaire d'un document (pour prévisualisation)
+export const fetchDocumentBlob = async (id) => {
+  try {
+    const response = await api.get(`/documents/${id}/download/`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération du document:', error);
+    throw error;
+  }
+};
+
+/**
  * Approuver un document (Admin)
  */
 export const approveDocument = async (id) => {
@@ -377,6 +429,19 @@ export const deleteDocument = async (id) => {
     return response;
   } catch (error) {
     console.error('Erreur lors de la suppression du document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Récupérer les types de documents
+ */
+export const getDocumentTypes = async () => {
+  try {
+    const response = await api.get('/type-documents/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des types de documents:', error);
     throw error;
   }
 };

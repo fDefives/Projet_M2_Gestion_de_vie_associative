@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
+from django.http import FileResponse
+import os
 
 from .models import Association, AssociationType, Membre, TypeDocument, Document, Notification
 from .serializers import (
@@ -266,6 +268,29 @@ class DocumentViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(document)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def download(self, request, pk=None):
+        """Télécharge un document"""
+        document = self.get_object()
+        
+        # Vérifier les permissions
+        if not request.user.is_staff and document.id_association.id_utilisateur != request.user:
+            return Response(
+                {"error": "Vous n'avez pas la permission de télécharger ce document"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Retourner le fichier
+        if document.nom_fichier and os.path.exists(document.nom_fichier.path):
+            response = FileResponse(document.nom_fichier.open('rb'))
+            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(document.nom_fichier.name)}"'
+            return response
+        else:
+            return Response(
+                {"error": "Fichier introuvable"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     def destroy(self, request, *args, **kwargs):
         """Supprime un document (propriétaire ou admin)"""

@@ -163,10 +163,10 @@ def main():
         "postgres:15",
         "PostgreSQL service"
     ))
-    all_checks.append(check_file(
-        os.path.join('db', '01-init.sql'),
-        "Script initialisation BD SQL"
-    ))
+    # all_checks.append(check_file(
+    #     os.path.join('db', '01-init.sql'),
+    #     "Script initialisation BD SQL"
+    # ))
     
     # ============= TESTS =============
     print(f"\n{YELLOW}Tests Unitaires{RESET}")

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle2, Clock, TrendingUp, Users, FileText, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, TrendingUp, Users, FileText, AlertTriangle, Check, X, Search } from 'lucide-react';
+import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
 import * as API from '../../api';
 
 interface Association {
@@ -13,12 +14,19 @@ interface Association {
 
 interface StatsOverviewProps {
   onSelectAssociation: (association: Association) => void;
+  refreshKey?: number;
 }
 
-export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
+const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
+
+export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOverviewProps) {
   const [associations, setAssociations] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -37,7 +45,69 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
       }
     };
     loadData();
-  }, []);
+  }, [refreshKey]);
+
+  const handleOpenValidationModal = (doc: any) => {
+    setSelectedDocument(doc);
+    setShowValidationModal(true);
+  };
+
+  const handleApproveDocument = async () => {
+    if (!selectedDocument) return;
+    const docId = selectedDocument.id_document || selectedDocument.id;
+    if (!docId) return;
+
+    setActionLoading((prev) => ({ ...prev, [docId]: true }));
+    try {
+      await API.approveDocument(docId);
+      setDocuments((prev) =>
+        prev.map((d) =>
+          (d.id_document || d.id) === docId ? { ...d, statut: 'approved', status: 'approved' } : d
+        )
+      );
+      setShowValidationModal(false);
+      setRejectionReason('');
+    } catch (error) {
+      console.error('Erreur lors de l\'approbation du document:', error);
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [docId]: false }));
+    }
+  };
+
+  const handleRejectDocument = async () => {
+    if (!selectedDocument || !rejectionReason.trim()) return;
+    const docId = selectedDocument.id_document || selectedDocument.id;
+    if (!docId) return;
+
+    setActionLoading((prev) => ({ ...prev, [docId]: true }));
+    try {
+      await API.rejectDocument(docId, rejectionReason);
+      setDocuments((prev) =>
+        prev.map((d) =>
+          (d.id_document || d.id) === docId ? { ...d, statut: 'rejected', status: 'rejected' } : d
+        )
+      );
+      setShowValidationModal(false);
+      setRejectionReason('');
+    } catch (error) {
+      console.error('Erreur lors du rejet du document:', error);
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [docId]: false }));
+    }
+  };
+
+  const handlePreviewDocument = async (doc: any) => {
+    const docId = doc?.id_document || doc?.id;
+    if (!docId) return;
+    try {
+      const blob = await API.fetchDocumentBlob(docId);
+      const url = URL.createObjectURL(new Blob([blob], { type: blob.type || 'application/pdf' }));
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (error) {
+      console.error('Erreur lors de l\'ouverture du document:', error);
+    }
+  };
 
   const stats = useMemo(() => {
     console.log('Loading:', loading, 'Associations count:', associations.length);
@@ -50,19 +120,29 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
       );
 
     const normalized = data.map((a) => {
-      const hasDocs = associationHasDocs(a);
-      const completionRate = hasDocs ? a.completionRate ?? 0 : 0; // no docs => dossier non complet
+      const assocDocs = docs.filter((d) => d.id_association === a.id_association || d.id_association === a.id);
+      const hasDocs = assocDocs.length > 0;
+      const approvedTypes = REQUIRED_DOCUMENT_TYPES.filter((type) =>
+        assocDocs.some(
+          (doc) => doc.type_document_name?.toLowerCase().includes(type.toLowerCase()) && doc.statut === 'approved'
+        )
+      );
+      const approvedCount = approvedTypes.length;
+      const totalRequired = REQUIRED_DOCUMENT_TYPES.length;
+      const completionRate = totalRequired > 0 ? Math.round((approvedCount / totalRequired) * 100) : 0;
+
       return { ...a, completionRate, hasDocs };
     });
 
     const total = normalized.length;
     const active = normalized.filter((a) => (a.status || a.statut) === 'active').length;
-    const complete = normalized.filter((a) => a.completionRate === 100 && a.hasDocs).length;
-    const incomplete = normalized.filter((a) => a.completionRate < 100 || !a.hasDocs).length;
-    const notStarted = normalized.filter((a) => a.completionRate === 0 || !a.hasDocs).length;
+    const complete = normalized.filter((a) => a.hasDocs && a.completionRate === 100).length;
+    const incomplete = normalized.filter((a) => a.hasDocs && a.completionRate < 100).length;
+    const notStarted = normalized.filter((a) => !a.hasDocs).length;
 
     const statusValue = (d: any) => d.status || d.statut;
-    const pendingDocs = docs.filter((d) => statusValue(d) === 'pending').length;
+    const pendingDocsList = docs.filter((d) => statusValue(d) === 'submitted');
+    const pendingDocs = pendingDocsList.length;
     const expiredDocs = docs.filter((d) => statusValue(d) === 'expired').length;
     const rejectedDocs = docs.filter((d) => statusValue(d) === 'rejected').length;
 
@@ -73,6 +153,7 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
       incomplete,
       notStarted,
       pendingDocs,
+      pendingDocsList,
       expiredDocs,
       rejectedDocs,
       normalized,
@@ -132,50 +213,82 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
       </div>
 
       {/* Alertes importantes */}
-      {(stats.expiredDocs > 0 || stats.rejectedDocs > 0 || stats.pendingDocs > 0) && (
+      {(stats.pendingDocs > 0) && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-gray-900 mb-4 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-500" />
             Alertes et actions nécessaires
           </h2>
           
-          <div className="space-y-3">
+            <div className="space-y-3">
             {stats.pendingDocs > 0 && (
-              <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                <Clock className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-orange-900">{stats.pendingDocs} document(s) en attente de validation</div>
-                  <div className="text-sm text-orange-700 mt-1">
-                    Des associations attendent votre validation pour compléter leur dossier
+              <div className="mt-4">
+              <div className="space-y-2">
+                {stats.pendingDocsList
+                .slice(0, 5)
+                .map((doc, index) => {
+                  const assoc = associations.find(
+                  (a) => a.id_association === doc.id_association || a.id === doc.id_association
+                  );
+                  const docId = doc.id_document || doc.id || `${doc.nom_fichier || 'doc'}-${index}`;
+                  const submittedDate = doc.date_depot ? new Date(doc.date_depot).toLocaleDateString('fr-FR') : null;
+                  const statusValue = (doc.statut || doc.status || 'submitted') as any;
+                  return (
+                  <div
+                    key={docId}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                    <DocumentStatusBadge status={statusValue} />
+                    <div className="flex flex-col gap-1 flex-1">
+                      <div className="text-gray-900 font-medium">
+                      {doc.nom_fichier?.split('/').pop() || doc.type_document_name || 'Document'}
+                      </div>
+                      {assoc && (
+                      <div className="text-xs text-blue-700 font-semibold">
+                        Association : {assoc.nom_association || assoc.name}
+                      </div>
+                      )}
+                      <div className="text-sm text-gray-600">
+                      {doc.type_document_name || 'Document'}
+                      </div>
+                      {submittedDate && (
+                      <div className="text-xs text-gray-500">Soumis le {submittedDate}</div>
+                      )}
+                    </div>
+                    </div>
+                        <div className="flex items-center gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => assoc && onSelectAssociation(assoc)}
+                      className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-white transition disabled:opacity-60"
+                      disabled={!assoc}
+                    >
+                      Voir dossier
+                    </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewDocument(doc)}
+                            className="p-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-white transition"
+                            aria-label="Prévisualiser"
+                          >
+                            <Search className="w-4 h-4" />
+                          </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenValidationModal(doc)}
+                      className="px-4 py-2 text-sm rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition"
+                    >
+                      Traiter
+                    </button>
+                    </div>
                   </div>
-                </div>
+                  );
+                })}
+              </div>
               </div>
             )}
-
-            {stats.expiredDocs > 0 && (
-              <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-red-900">{stats.expiredDocs} document(s) expiré(s)</div>
-                  <div className="text-sm text-red-700 mt-1">
-                    Certaines associations ont des documents expirés (ex: assurance)
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {stats.rejectedDocs > 0 && (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <FileText className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-amber-900">{stats.rejectedDocs} document(s) rejeté(s)</div>
-                  <div className="text-sm text-amber-700 mt-1">
-                    Les associations doivent soumettre à nouveau ces documents
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
         </div>
       )}
 
@@ -285,6 +398,73 @@ export function StatsOverview({ onSelectAssociation }: StatsOverviewProps) {
           </div>
         </div>
       </div>
+
+      {/* Validation Modal */}
+      {showValidationModal && selectedDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Validation du document</h2>
+
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">Document</div>
+              <div className="font-semibold text-gray-900">
+                {selectedDocument.nom_fichier?.split('/').pop() || 'Document'}
+              </div>
+              <div className="text-sm text-gray-600 mt-2">
+                Type : {selectedDocument.type_document_name || 'Non spécifié'}
+              </div>
+              <div className="text-sm text-gray-600">
+                Déposé le {selectedDocument.date_depot ? new Date(selectedDocument.date_depot).toLocaleDateString('fr-FR') : 'N/A'}
+              </div>
+              {selectedDocument.uploaded_by_email && (
+                <div className="text-sm text-gray-600">
+                  Par : {selectedDocument.uploaded_by_email}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <button
+                onClick={handleApproveDocument}
+                disabled={!!actionLoading[selectedDocument.id_document || selectedDocument.id]}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Check className="w-5 h-5" />
+                {actionLoading[selectedDocument.id_document || selectedDocument.id] ? 'Validation...' : 'Valider le document'}
+              </button>
+
+              <div className="border-t border-gray-200 pt-4">
+                <label className="block text-gray-700 font-medium mb-2">Ou refuser avec un motif :</label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Ex: Document non signé, mauvaise année..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 mb-3"
+                  rows={3}
+                />
+                <button
+                  onClick={handleRejectDocument}
+                  disabled={!rejectionReason.trim() || !!actionLoading[selectedDocument.id_document || selectedDocument.id]}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <X className="w-5 h-5" />
+                  {actionLoading[selectedDocument.id_document || selectedDocument.id] ? 'Rejet...' : 'Refuser le document'}
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowValidationModal(false);
+                setRejectionReason('');
+              }}
+              className="w-full mt-4 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
