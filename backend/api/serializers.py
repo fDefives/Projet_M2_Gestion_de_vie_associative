@@ -53,7 +53,8 @@ class AssociationSerializer(serializers.ModelSerializer):
         model = Association
         fields = ['id_association', 'nom_association', 'date_creation_association', 'ufr',
                   'statut', 'email_contact', 'insta_contact', 'tel_contact', 'num_siret',
-                  'association_type', 'association_type_name', 'id_utilisateur', 'user_email', 'created_at', 'updated_at']
+                  'association_type', 'association_type_name', 'id_utilisateur', 'user_email', 'created_at',
+                  'updated_at']
         read_only_fields = ['id_association', 'created_at', 'updated_at']
 
 
@@ -70,6 +71,7 @@ class MembreSerializer(serializers.ModelSerializer):
             'date_adhesion', 'statut_membre', 'date_fin_adhesion',
             'associations', 'created_at', 'updated_at'
         ]
+
 
 class TypeDocumentSerializer(serializers.ModelSerializer):
     """Serializer pour les types de documents"""
