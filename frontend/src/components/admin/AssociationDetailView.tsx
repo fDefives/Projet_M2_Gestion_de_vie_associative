@@ -8,6 +8,7 @@ import {
   FileText,
   Upload,
   Download,
+  Search,
   Check,
   X,
   Clock,
@@ -32,7 +33,7 @@ interface AssociationData {
 interface DocumentData {
   id_document: number;
   nom_fichier: string;
-  statut: 'validated' | 'pending' | 'rejected' | 'expired' | 'missing';
+  statut: 'submitted' | 'approved' | 'rejected' | 'expired' | 'draft';
   id_type_document: number;
   type_document_name: string;
   date_depot: string;
@@ -70,12 +71,13 @@ interface MandatData {
   date_fin: string | null;
 }
 
-type DocumentStatus = 'validated' | 'pending' | 'rejected' | 'expired' | 'missing';
+type DocumentStatus = 'submitted' | 'approved' | 'rejected' | 'expired' | 'draft' | 'missing';
 type TabType = 'overview' | 'documents' | 'leaders' | 'history';
 
 interface AssociationDetailViewProps {
   association: any;
   onBack: () => void;
+  onDataChanged?: () => void;
 }
 
 const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
@@ -87,7 +89,7 @@ const DOCUMENT_TYPES: Record<string, { label: string }> = {
   rapport: { label: 'Rapport' },
 };
 
-export function AssociationDetailView({ association, onBack }: AssociationDetailViewProps) {
+export function AssociationDetailView({ association, onBack, onDataChanged }: AssociationDetailViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
@@ -96,6 +98,8 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
   const [associationMembers, setAssociationMembers] = useState<MembreData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Load association documents and members
   useEffect(() => {
@@ -131,24 +135,24 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
   const handleApproveDocument = async () => {
     if (!selectedDocument) return;
     try {
-      // Call API to approve document
-      console.log('Approving document:', selectedDocument.id_document);
+      await API.approveDocument(selectedDocument.id_document);
       // Reload documents
       const docsResponse = await API.getDocuments();
       const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
       const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
       setAssociationDocs(filteredDocs);
       setShowValidationModal(false);
+      onDataChanged?.();
     } catch (err) {
       console.error('Error approving document:', err);
+      setError('Erreur lors de l\'approbation du document');
     }
   };
 
   const handleRejectDocument = async () => {
     if (!selectedDocument || !rejectionReason.trim()) return;
     try {
-      // Call API to reject document
-      console.log('Rejecting document:', selectedDocument.id_document, rejectionReason);
+      await API.rejectDocument(selectedDocument.id_document, rejectionReason);
       // Reload documents
       const docsResponse = await API.getDocuments();
       const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
@@ -156,21 +160,62 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
       setAssociationDocs(filteredDocs);
       setShowValidationModal(false);
       setRejectionReason('');
+      onDataChanged?.();
     } catch (err) {
       console.error('Error rejecting document:', err);
+      setError('Erreur lors du rejet du document');
+    }
+  };
+
+  const handleDownloadDocument = async (doc: DocumentData) => {
+    try {
+      await API.downloadDocument(doc.id_document, doc.nom_fichier);
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      setError('Erreur lors du téléchargement du document');
+    }
+  };
+
+  const handlePreviewDocument = async (doc: DocumentData) => {
+    try {
+      const blob = await API.fetchDocumentBlob(doc.id_document);
+      const url = URL.createObjectURL(new Blob([blob], { type: blob.type || 'application/pdf' }));
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err) {
+      console.error('Error previewing document:', err);
+      setError('Erreur lors de l\'ouverture du document');
+    }
+  };
+
+  const reloadDocuments = async () => {
+    try {
+      const docsResponse = await API.getDocuments();
+      const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
+      const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
+      setAssociationDocs(filteredDocs);
+    } catch (err) {
+      console.error('Error reloading documents:', err);
     }
   };
 
   // Calculate completion rate and statistics
+  // Count only approved documents for each required type
+  const approvedDocsByType = REQUIRED_DOCUMENT_TYPES.map(type => {
+    return associationDocs.find(
+      d => d.type_document_name?.toLowerCase().includes(type.toLowerCase())
+    )?.statut === 'approved';
+  }).filter(Boolean).length;
+
   const documentStats = {
     total: REQUIRED_DOCUMENT_TYPES.length,
-    validated: associationDocs.filter(d => d.statut === 'validated').length,
-    pending: associationDocs.filter(d => d.statut === 'pending').length,
+    validated: associationDocs.filter(d => d.statut === 'approved').length,
+    pending: associationDocs.filter(d => d.statut === 'submitted').length,
     rejected: associationDocs.filter(d => d.statut === 'rejected').length,
     expired: associationDocs.filter(d => d.statut === 'expired').length,
   };
 
-  const completionRate = Math.round((documentStats.validated / documentStats.total) * 100);
+  const completionRate = Math.round((approvedDocsByType / documentStats.total) * 100);
   
   const displayName = association.nom_association || association.name;
   const displayUFR = association.ufr;
@@ -227,18 +272,26 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Clock className="w-4 h-4" />
-                <span>Créée le {new Date(association.date_creation_association || association.createdAt).toLocaleDateString('fr-FR')}</span>
+                <span>
+                  Créée le {association.date_creation_association 
+                    ? new Date(association.date_creation_association).toLocaleDateString('fr-FR')
+                    : 'Non renseignée'
+                  }
+                </span>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col items-end gap-3">
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+              <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300">
                 <Mail className="w-4 h-4" />
                 Envoyer un email
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300">
+              <button 
+                onClick={() => setShowEditModal(true)}
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300"
+              >
                 <Edit2 className="w-4 h-4" />
                 Modifier
               </button>
@@ -342,6 +395,9 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
                 <DocumentsTab
                   documents={associationDocs}
                   onValidateDocument={handleValidateDocument}
+                  onDownloadDocument={handleDownloadDocument}
+                  onPreviewDocument={handlePreviewDocument}
+                  onUploadClick={() => setShowUploadModal(true)}
                 />
               )}
 
@@ -365,7 +421,7 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
 
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Document</div>
-              <div className="font-semibold text-gray-900">{selectedDocument.nom_fichier}</div>
+              <div className="font-semibold text-gray-900">{selectedDocument.nom_fichier.split('/').pop()}</div>
               <div className="text-sm text-gray-600 mt-2">
                 Type : {selectedDocument.type_document_name || 'Non spécifié'}
               </div>
@@ -414,6 +470,28 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
             </button>
           </div>
         </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <UploadDocumentModal
+          associationId={association.id_association || association.id}
+          onClose={() => setShowUploadModal(false)}
+          onSuccess={reloadDocuments}
+          onDataChanged={onDataChanged}
+        />
+      )}
+
+      {/* Edit Association Modal */}
+      {showEditModal && (
+        <EditAssociationModal
+          association={association}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );
@@ -516,14 +594,20 @@ function OverviewTab({ association, documents, members, stats, completionRate }:
 interface DocumentsTabProps {
   documents: DocumentData[];
   onValidateDocument: (doc: DocumentData) => void;
+  onDownloadDocument: (doc: DocumentData) => void;
+  onPreviewDocument: (doc: DocumentData) => void;
+  onUploadClick: () => void;
 }
 
-function DocumentsTab({ documents, onValidateDocument }: DocumentsTabProps) {
+function DocumentsTab({ documents, onValidateDocument, onDownloadDocument, onPreviewDocument, onUploadClick }: DocumentsTabProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Gestion des documents</h3>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+        <button 
+          onClick={onUploadClick}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+        >
           <Upload className="w-4 h-4" />
           Importer un document
         </button>
@@ -544,7 +628,7 @@ function DocumentsTab({ documents, onValidateDocument }: DocumentsTabProps) {
               <div className="flex items-center gap-4 flex-1">
                 <DocumentStatusBadge status={doc.statut as DocumentStatus} />
                 <div className="flex-1">
-                  <div className="text-gray-900 font-medium">{doc.nom_fichier}</div>
+                  <div className="text-gray-900 font-medium">{doc.nom_fichier.split('/').pop()}</div>
                   <div className="text-sm text-gray-600">
                     {doc.type_document_name}
                   </div>
@@ -560,10 +644,20 @@ function DocumentsTab({ documents, onValidateDocument }: DocumentsTabProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                <button className="p-2 text-gray-600 hover:bg-white rounded-lg transition-colors">
+                <button 
+                  onClick={() => onPreviewDocument(doc)}
+                  className="p-2 text-gray-600 hover:bg-white rounded-lg transition-colors"
+                  aria-label="Prévisualiser"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => onDownloadDocument(doc)}
+                  className="p-2 text-gray-600 hover:bg-white rounded-lg transition-colors"
+                >
                   <Download className="w-4 h-4" />
                 </button>
-                {doc.statut === 'pending' && (
+                {doc.statut === 'submitted' && (
                   <button
                     onClick={() => onValidateDocument(doc)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
@@ -782,6 +876,323 @@ function HistoryTab({ associationId }: HistoryTabProps) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Modal pour l'upload de documents
+interface UploadDocumentModalProps {
+  associationId: number;
+  onClose: () => void;
+  onSuccess: () => void;
+  onDataChanged?: () => void;
+}
+
+function UploadDocumentModal({ associationId, onClose, onSuccess, onDataChanged }: UploadDocumentModalProps) {
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedType, setSelectedType] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadDocumentTypes = async () => {
+      try {
+        const response = await API.getDocumentTypes();
+        const types = Array.isArray(response) ? response : response?.results || [];
+        setDocumentTypes(types);
+      } catch (err) {
+        console.error('Error loading document types:', err);
+        setError('Erreur lors du chargement des types de documents');
+      }
+    };
+
+    loadDocumentTypes();
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setError('');
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !selectedType) {
+      setError('Veuillez sélectionner un fichier et un type de document');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError('');
+
+      const formData = new FormData();
+      formData.append('nom_fichier', selectedFile);
+      formData.append('id_association', associationId.toString());
+      formData.append('id_type_document', selectedType);
+
+      await API.uploadDocument(formData);
+      onSuccess();
+      onClose();
+      onDataChanged?.();
+    } catch (err) {
+      console.error('Error uploading document:', err);
+      setError('Erreur lors de l\'upload du document');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
+      <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Importer un document</h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type de document</label>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Sélectionner un type</option>
+              {documentTypes.map((type) => (
+                <option key={type.id_type_document} value={type.id_type_document}>
+                  {type.libelle}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Fichier</label>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              accept=".pdf"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {selectedFile && (
+              <p className="text-sm text-gray-600 mt-2">
+                Fichier sélectionné : {selectedFile.name}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="h-6" />
+        <div className="flex gap-4 mt-6">
+          <button
+            onClick={onClose}
+            disabled={uploading}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleUpload}
+            disabled={!selectedFile || !selectedType || uploading}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {uploading ? 'Envoi en cours...' : 'Importer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal pour modifier l'association
+interface EditAssociationModalProps {
+  association: any;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function EditAssociationModal({ association, onClose, onSuccess }: EditAssociationModalProps) {
+  const [formData, setFormData] = useState({
+    nom_association: association.nom_association || '',
+    ufr: association.ufr || '',
+    email_contact: association.email_contact || '',
+    tel_contact: association.tel_contact || '',
+    num_siret: association.num_siret || '',
+    insta_contact: association.insta_contact || '',
+    desc_association: association.desc_association || '',
+    statut: association.statut || 'active',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setSaving(true);
+      setError('');
+
+      await API.updateAssociation(association.id_association || association.id, formData);
+      onSuccess();
+    } catch (err) {
+      console.error('Error updating association:', err);
+      setError('Erreur lors de la mise à jour de l\'association');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
+      <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Modifier l'association</h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom de l'association <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="nom_association"
+                  value={formData.nom_association}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nom de l'association"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">UFR</label>
+                <input
+                  type="text"
+                  name="ufr"
+                  value={formData.ufr}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="UFR Sciences"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                <select
+                  name="statut"
+                  value={formData.statut}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspendue</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email de contact</label>
+                <input
+                  type="email"
+                  name="email_contact"
+                  value={formData.email_contact}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="contact@association.fr"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                <input
+                  type="tel"
+                  name="tel_contact"
+                  value={formData.tel_contact}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="01234567890"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">SIRET</label>
+                <input
+                  type="text"
+                  name="num_siret"
+                  value={formData.num_siret}
+                  onChange={handleChange}
+                  maxLength={14}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="12345678901234"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Instagram</label>
+                <input
+                  type="text"
+                  name="insta_contact"
+                  value={formData.insta_contact}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="@association"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  name="desc_association"
+                  value={formData.desc_association}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Description de l'association"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="h-6" />
+          <div className="flex gap-4 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

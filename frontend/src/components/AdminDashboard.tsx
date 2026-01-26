@@ -18,6 +18,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   const [currentView, setCurrentView] = useState<AdminView>('overview');
   const [selectedAssociation, setSelectedAssociation] = useState<Association | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [newAsso, setNewAsso] = useState({
     nom_association: '',
     ufr: '',
@@ -62,6 +63,8 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
     setSelectedAssociation(association);
     setCurrentView('associations');
   };
+
+  const handleDataChanged = () => setRefreshKey((k) => k + 1);
 
   const handleBackToList = () => {
     setSelectedAssociation(null);
@@ -237,7 +240,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
           {/* Main Content */}
           <main className="flex-1 min-w-0">
             {currentView === 'overview' && !selectedAssociation && (
-              <StatsOverview onSelectAssociation={handleSelectAssociation} />
+              <StatsOverview onSelectAssociation={handleSelectAssociation} refreshKey={refreshKey} />
             )}
 
             {currentView === 'associations' && !selectedAssociation && (
@@ -383,6 +386,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
               <AssociationDetailView
                 association={selectedAssociation}
                 onBack={handleBackToList}
+                onDataChanged={handleDataChanged}
               />
             )}
 

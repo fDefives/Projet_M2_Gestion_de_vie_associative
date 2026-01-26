@@ -1,7 +1,7 @@
 import React from 'react';
-import { Check, X, Clock, AlertCircle, FileX } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, FileX, FileEdit } from 'lucide-react';
 
-type DocumentStatus = 'validated' | 'pending' | 'rejected' | 'expired' | 'missing';
+type DocumentStatus = 'approved' | 'submitted' | 'rejected' | 'expired' | 'missing' | 'draft';
 
 interface DocumentStatusBadgeProps {
   status: DocumentStatus;
@@ -10,14 +10,14 @@ interface DocumentStatusBadgeProps {
 
 export function DocumentStatusBadge({ status, className = '' }: DocumentStatusBadgeProps) {
   const configs = {
-    validated: {
+    approved: {
       icon: Check,
       label: 'Validé',
       bgColor: 'bg-green-100',
       textColor: 'text-green-700',
       iconColor: 'text-green-600',
     },
-    pending: {
+    submitted: {
       icon: Clock,
       label: 'En attente',
       bgColor: 'bg-orange-100',
@@ -41,6 +41,13 @@ export function DocumentStatusBadge({ status, className = '' }: DocumentStatusBa
     missing: {
       icon: FileX,
       label: 'Manquant',
+      bgColor: 'bg-gray-100',
+      textColor: 'text-gray-700',
+      iconColor: 'text-gray-600',
+    },
+    draft: {
+      icon: FileEdit,
+      label: 'Brouillon',
       bgColor: 'bg-gray-100',
       textColor: 'text-gray-700',
       iconColor: 'text-gray-600',
