@@ -26,12 +26,29 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
     date_creation_association: new Date().toISOString().split('T')[0],
     email_contact: '',
     tel_contact: '',
+    insta_contact: '',
+    association_type: '',
   });
+  const [associationTypes, setAssociationTypes] = useState<any[]>([]);
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
   });
   const [loading, setLoading] = useState(false);
+
+  // Load association types on mount
+  React.useEffect(() => {
+    const loadTypes = async () => {
+      try {
+        const data = await API.getAssociationTypes();
+        const typesArray = Array.isArray(data) ? data : (data?.results || []);
+        setAssociationTypes(typesArray);
+      } catch (error) {
+        console.error('Erreur lors du chargement des types:', error);
+      }
+    };
+    loadTypes();
+  }, []);
 
   // Fonctions de validation
   const isValidEmail = (email: string): boolean => {
@@ -85,7 +102,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
 
   const handleCreateAssociation = async () => {
     // Vérifications basiques
-    if (!newAsso.nom_association || !newAsso.ufr || !newAsso.num_siret || !newAsso.date_creation_association || !newAsso.email_contact || !newAsso.tel_contact) {
+    if (!newAsso.nom_association || !newAsso.ufr || !newAsso.num_siret || !newAsso.date_creation_association || !newAsso.email_contact || !newAsso.tel_contact || !newAsso.association_type) {
       alert('Tous les champs association sont obligatoires');
       return;
     }
@@ -142,6 +159,8 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
         date_creation_association: new Date().toISOString().split('T')[0],
         email_contact: '',
         tel_contact: '',
+        insta_contact: '',
+        association_type: '',
       });
       setNewUser({ email: '', password: '' });
       setShowCreateModal(false);
@@ -330,6 +349,34 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                             onChange={(e) => setNewAsso({ ...newAsso, tel_contact: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="01234567890"
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Type d'association</label>
+                          <select
+                            value={newAsso.association_type}
+                            onChange={(e) => setNewAsso({ ...newAsso, association_type: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          >
+                            <option value="">-- Sélectionner un type --</option>
+                            {associationTypes.map((type: any) => (
+                              <option key={type.id} value={type.id}>
+                                {type.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Instagram</label>
+                          <input
+                            type="text"
+                            value={newAsso.insta_contact}
+                            onChange={(e) => setNewAsso({ ...newAsso, insta_contact: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="@association"
                           />
                         </div>
                       </div>

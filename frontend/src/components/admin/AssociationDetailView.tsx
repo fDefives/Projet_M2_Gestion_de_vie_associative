@@ -96,17 +96,22 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
   const [rejectionReason, setRejectionReason] = useState('');
   const [associationDocs, setAssociationDocs] = useState<DocumentData[]>([]);
   const [associationMembers, setAssociationMembers] = useState<MembreData[]>([]);
+  const [associationDetails, setAssociationDetails] = useState<any>(association);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // Load association documents and members
+  // Load association documents, members, and full details
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         setError(null);
+
+        // Load full association details
+        const detailsResponse = await API.getAssociationDetails(association.id_association || association.id);
+        setAssociationDetails(detailsResponse);
 
         // Load all documents and filter by association
         const docsResponse = await API.getDocuments();
@@ -224,6 +229,15 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
   const displayEmail = association.email_contact || association.email;
   const displayPhone = association.tel_contact || association.phone;
 
+  // Use association details with fallback to association prop
+  const displayAssociation = { ...association, ...associationDetails };
+
+  // Debug description
+  console.log('Description values:');
+  console.log('desc_association:', displayAssociation.desc_association);
+  console.log('description:', displayAssociation.description);
+  console.log('Full association:', displayAssociation);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -259,10 +273,6 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
                 <span>{displayUFR}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
-                <FileText className="w-4 h-4" />
-                <span>{displaySiret || 'Non fourni'}</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-600">
                 <Mail className="w-4 h-4" />
                 <span>{displayEmail}</span>
               </div>
@@ -273,12 +283,31 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
               <div className="flex items-center gap-2 text-gray-600">
                 <Clock className="w-4 h-4" />
                 <span>
-                  Créée le {association.date_creation_association 
-                    ? new Date(association.date_creation_association).toLocaleDateString('fr-FR')
+                  Créée le {displayAssociation.date_creation_association || displayAssociation.created_at
+                    ? new Date(displayAssociation.date_creation_association || displayAssociation.created_at).toLocaleDateString('fr-FR')
                     : 'Non renseignée'
                   }
                 </span>
               </div>
+              {(displayAssociation.associationTypeName || displayAssociation.association_type_name) && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <span className="text-sm font-medium">Type</span>
+                  <span>{displayAssociation.associationTypeName || displayAssociation.association_type_name}</span>
+                </div>
+              )}
+              {(displayAssociation.insta_contact || displayAssociation.insta) && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <span className="text-sm font-medium">@</span>
+                  <span>{displayAssociation.insta_contact || displayAssociation.insta}</span>
+                </div>
+              )}
+              
+              {(displayAssociation.desc_association || displayAssociation.description) && (
+                <div className="col-span-2 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Description</div>
+                  <div className="text-sm text-gray-600 whitespace-pre-wrap">{displayAssociation.desc_association || displayAssociation.description}</div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -485,7 +514,7 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
       {/* Edit Association Modal */}
       {showEditModal && (
         <EditAssociationModal
-          association={association}
+          association={displayAssociation}
           onClose={() => setShowEditModal(false)}
           onSuccess={() => {
             setShowEditModal(false);
@@ -1020,17 +1049,32 @@ interface EditAssociationModalProps {
 
 function EditAssociationModal({ association, onClose, onSuccess }: EditAssociationModalProps) {
   const [formData, setFormData] = useState({
-    nom_association: association.nom_association || '',
+    nom_association: association.nom_association || association.name || '',
     ufr: association.ufr || '',
-    email_contact: association.email_contact || '',
-    tel_contact: association.tel_contact || '',
-    num_siret: association.num_siret || '',
+    email_contact: association.email_contact || association.email || '',
+    tel_contact: association.tel_contact || association.phone || '',
+    num_siret: association.num_siret || association.siret || '',
     insta_contact: association.insta_contact || '',
-    desc_association: association.desc_association || '',
-    statut: association.statut || 'active',
+    desc_association: association.desc_association || association.description || '',
+    statut: association.statut || association.status || 'active',
+    association_type: association.association_type || association.id || '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [associationTypes, setAssociationTypes] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadAssociationTypes = async () => {
+      try {
+        const data = await API.getAssociationTypes();
+        const typesArray = Array.isArray(data) ? data : (data?.results || []);
+        setAssociationTypes(typesArray);
+      } catch (err) {
+        console.error('Error loading association types:', err);
+      }
+    };
+    loadAssociationTypes();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -1108,6 +1152,23 @@ function EditAssociationModal({ association, onClose, onSuccess }: EditAssociati
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                   <option value="suspended">Suspendue</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type d'association</label>
+                <select
+                  name="association_type"
+                  value={formData.association_type}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Sélectionner un type --</option>
+                  {associationTypes.map((type: any) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

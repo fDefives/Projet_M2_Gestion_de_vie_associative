@@ -53,8 +53,8 @@ class AssociationSerializer(serializers.ModelSerializer):
         model = Association
         fields = ['id_association', 'nom_association', 'date_creation_association', 'ufr',
                   'statut', 'email_contact', 'insta_contact', 'tel_contact', 'num_siret',
-                  'association_type', 'association_type_name', 'id_utilisateur', 'user_email', 'created_at',
-                  'updated_at']
+                  'desc_association', 'association_type', 'association_type_name', 'id_utilisateur', 
+                  'user_email', 'created_at', 'updated_at']
         read_only_fields = ['id_association', 'created_at', 'updated_at']
 
 
