@@ -159,6 +159,7 @@ class DocumentAdmin(admin.ModelAdmin):
         ('Métadonnées', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
 
+
 # =========================
 # NOTIFICATIONS
 # =========================
