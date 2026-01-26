@@ -15,6 +15,7 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.email
 
+
 class RoleType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -28,6 +29,7 @@ class RoleType(models.Model):
     def __str__(self):
         return self.name
 
+
 class AssociationType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -35,6 +37,8 @@ class AssociationType(models.Model):
 
     def __str__(self):
         return self.name
+    
+
 class Association(models.Model):
     """Modèle association"""
     STATUS_CHOICES = [
@@ -96,13 +100,12 @@ class Membre(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.prenom} {self.nom}"
+
 
 class TypeDocument(models.Model):
     """Modèle type de document"""
@@ -214,3 +217,4 @@ class Mandat(models.Model):
 
     def __str__(self):
         return f"{self.membre} - {self.role_type} ({self.association})"
+    
