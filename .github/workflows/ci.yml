@@ -150,18 +150,19 @@ jobs:
           python manage.py shell << EOF
           from django.contrib.auth import get_user_model
           User = get_user_model()
-          User.objects.filter(email="${ADMIN_EMAIL}").exists() or \
-          User.objects.create_superuser(
-              email="${ADMIN_EMAIL}",
-              password="${ADMIN_PASSWORD}"
-          )
+          if not User.objects.filter(username="admin").exists():
+              User.objects.create_superuser(
+                  username="admin",
+                  email="${ADMIN_EMAIL}",
+                  password="${ADMIN_PASSWORD}"
+              )
           EOF
 
       - name: Start Django backend
         working-directory: backend
         run: |
           python manage.py runserver 0.0.0.0:8000 &
-          sleep 8
+          sleep 12
 
       # ⚛️ Frontend
       - uses: actions/setup-node@v4
@@ -175,12 +176,15 @@ jobs:
       - name: Start frontend
         working-directory: frontend
         run: |
-          npm run dev -- --host &
-          sleep 8
+          npm run dev -- --host --port 3001 &
+          sleep 12
 
       # 🧪 Selenium
       - name: Run Selenium tests
         working-directory: backend
         run: |
-          pytest tests/selenium -v
+          pytest ../tests_selenium -v
+      
+      
+
 
