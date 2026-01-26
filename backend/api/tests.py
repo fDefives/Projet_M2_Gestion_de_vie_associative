@@ -70,7 +70,6 @@ class APISwaggerFlowTests(APITestCase):
 
         # Le nouvel utilisateur se connecte et ne voit que son association
         self.client.credentials()  # reset
-        user_token = self._auth_as('newuser', 'password123')
         list_resp = self.client.get('/api/associations/')
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
         # La réponse est paginée en DRF: extraire results
@@ -182,7 +181,12 @@ class APISwaggerFlowTests(APITestCase):
         self._auth_as('usera', 'password123')
         user_docs = self.client.get('/api/documents/')
         results = user_docs.data['results'] if isinstance(user_docs.data, dict) else user_docs.data
-        self.assertEqual(len(results), 1, f"Expected 1 doc, got {len(results)}: {[d.get('id_document') for d in results]}")
+        self.assertEqual(
+            len(results),
+            1,
+            f"Expected 1 doc, got {len(results)}: "
+            f"{[d.get('id_document') for d in results]}",
+        )
         self.assertEqual(results[0]['id_document'], doc_a_id)
 
         # admin voit tout

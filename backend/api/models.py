@@ -26,9 +26,6 @@ class RoleType(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.name
-
 
 class AssociationType(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -100,6 +97,7 @@ class Membre(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
     class Meta:
         ordering = ['-created_at']
 
@@ -217,4 +215,3 @@ class Mandat(models.Model):
 
     def __str__(self):
         return f"{self.membre} - {self.role_type} ({self.association})"
-    
