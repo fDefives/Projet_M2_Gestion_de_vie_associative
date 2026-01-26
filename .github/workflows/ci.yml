@@ -181,8 +181,8 @@ jobs:
 
       # 🧪 Selenium
       - name: Run Selenium tests
-        working-directory: backend
         run: |
-          pytest tests/selenium -v
+          pytest tests_selenium -v
+      
 
 
