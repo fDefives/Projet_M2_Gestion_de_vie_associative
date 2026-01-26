@@ -11,6 +11,7 @@ from .models import (
     RoleType
 )
 
+
 # =========================
 # USERS
 # =========================
@@ -38,6 +39,7 @@ class CustomUserAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
 
 # =========================
 # ASSOCIATIONS
@@ -81,9 +83,11 @@ class AssociationAdmin(admin.ModelAdmin):
         }),
     )
 
+
 @admin.register(AssociationType)
 class AssociationTypeAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_at')
+
 
 # =========================
 # MEMBRES
@@ -104,6 +108,7 @@ class MembreAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
 
 # =========================
 # TYPES DE RÔLE
