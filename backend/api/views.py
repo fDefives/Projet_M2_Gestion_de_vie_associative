@@ -86,7 +86,13 @@ class AssociationViewSet(viewsets.ModelViewSet):
 
         if not email or not password:
             raise serializers.ValidationError(
-            {'user': 'email et mot de passe sont obligatoires pour créer le compte associé'})
+                {
+                    "user": (
+                        "email et mot de passe sont obligatoires "
+                        "pour créer le compte associé"
+                    )
+                }
+            )
 
         # Génère un username si absent (à partir de l'email) en garantissant l'unicité
         base_username = username_raw or email.split('@')[0]
