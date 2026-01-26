@@ -19,15 +19,6 @@ class Command(BaseCommand):
         # ADMIN
         # ------------------------
         User.objects.filter(email='admin@example.com').delete()
-
-        admin = User.objects.create_superuser(
-            username='admin',
-            email='admin@example.com',
-            password='admin123',
-            is_staff=True,
-            is_superuser=True
-        )
-
         self.stdout.write(self.style.SUCCESS('✓ Admin user created'))
 
         # ------------------------
@@ -55,15 +46,23 @@ class Command(BaseCommand):
         Association.objects.all().delete()
 
         associations = [
-            ("BLAIROUDEURS", "blairoudeurs.larochelle@gmail.com", "Protection de l’environnement.", "Maison des Étudiants", eco),
-            ("CULTIVE TA TÊTE ET TON ASSIETTE", "ctta.univlr@gmail.com", "Potager universitaire.", "IUT La Rochelle", eco),
-            ("PRIMROSE", "projet.primrose@gmail.com", "Protections hygiéniques écologiques.", "Avenue Michel Crépeau", solidarity),
+            ("BLAIROUDEURS", "blairoudeurs.larochelle@gmail.com", "Protection de l’environnement.", 
+             "Maison des Étudiants", eco),
+            ("CULTIVE TA TÊTE ET TON ASSIETTE", "ctta.univlr@gmail.com", "Potager universitaire.",
+             "IUT La Rochelle", eco),
+            ("PRIMROSE", "projet.primrose@gmail.com", "Protections hygiéniques écologiques.", 
+             "Avenue Michel Crépeau", solidarity),
             ("LES RUCHELAISES", "lesruchelaises.lru@gmail.com", "Apiculture et ateliers.", "La Rochelle", eco),
-            ("ENSEMBLE MUSICAL UNIVERSITAIRE", "contact.emulr@gmail.com", "Groupe de musique étudiant.", "Maison des Étudiants", music),
-            ("ESN LA ROCHELLE", "contact@esnlarochelle.org", "Accueil des étudiants internationaux.", "Maison des Étudiants", international),
-            ("LEMONSEA", "webmaster.lemonsea@gmail.com", "ONG sur l’acidification des océans.", "26 Rue de la Gloire", eco),
-            ("UNI'VERT", "univert.lr@gmail.com", "Sensibilisation écologique.", "39 Rue François de Vaux", eco),
-            ("LEGIO XX VALERIA VICTRIX", "valeriavictrix.legio.xx@gmail.com", "Reconstitution romaine.", "La Rochelle", history),
+            ("ENSEMBLE MUSICAL UNIVERSITAIRE", "contact.emulr@gmail.com", "Groupe de musique étudiant.",
+             "Maison des Étudiants", music),
+            ("ESN LA ROCHELLE", "contact@esnlarochelle.org", "Accueil des étudiants internationaux.", 
+             "Maison des Étudiants", international),
+            ("LEMONSEA", "webmaster.lemonsea@gmail.com", "ONG sur l’acidification des océans.",
+             "26 Rue de la Gloire", eco),
+            ("UNI'VERT", "univert.lr@gmail.com", "Sensibilisation écologique.", 
+             "39 Rue François de Vaux", eco),
+            ("LEGIO XX VALERIA VICTRIX", "valeriavictrix.legio.xx@gmail.com", "Reconstitution romaine.", 
+             "La Rochelle", history),
         ]
 
         for name, email, desc, ufr, atype in associations:
