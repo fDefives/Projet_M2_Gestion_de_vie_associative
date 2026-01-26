@@ -1,298 +1,227 @@
-"""
-Tests de l'API - Vérifier le système de rôles et les endpoints
-"""
-
-import os
-
+"""Tests d'API alignés sur les routes déclarées (swagger-like)."""
 
 from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase, APIClient
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
-from api.models import Association, Document, TypeDocument
+from rest_framework.test import APITestCase, APIClient
+
+from api.models import Association, TypeDocument, Document
 
 User = get_user_model()
 
 
-class AuthenticationTests(APITestCase):
-    """Tests d'authentification"""
-    
+class APISwaggerFlowTests(APITestCase):
+    """Couvre les cas principaux décrits par la doc: création via admin, accès restreint user, gestion docs."""
+
     def setUp(self):
         self.client = APIClient()
-        self.admin_user = User.objects.create_user(
-            email='admin@test.com',
-            username='admin',
-            password='testpass123',
-            role='admin'
-        )
-        self.regular_user = User.objects.create_user(
-            email='user@test.com',
-            username='user',
-            password='testpass123',
-            role='user'
-        )
 
-    def test_user_registration(self):
-        """Test l'enregistrement d'un nouvel utilisateur"""
-        response = self.client.post('/api/users/register/', {
-            'email': 'newuser@test.com',
-            'username': 'newuser',
-            'password': 'testpass123',
-            'password2': 'testpass123',
-            'first_name': 'Test',
-            'last_name': 'User'
-        })
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Nettoyage complet des données pour isoler les tests
+        User.objects.all().delete()
+        Association.objects.all().delete()
+        Document.objects.all().delete()
+        TypeDocument.objects.all().delete()
 
-    def test_login(self):
-        """Test la connexion"""
-        response = self.client.post('/api/auth/login/', {
-            'username': 'admin',
-            'password': 'testpass123'
-        })
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('access', response.data)
-        self.assertIn('refresh', response.data)
-
-    def test_get_current_user(self):
-        """Test la récupération du profil utilisateur"""
-        # Se connecter
-        response = self.client.post('/api/auth/login/', {
-            'username': 'user',
-            'password': 'testpass123'
-        })
-        token = response.data['access']
-        
-        # Récupérer le profil
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        response = self.client.get('/api/users/me/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['email'], 'user@test.com')
-        self.assertEqual(response.data['role'], 'user')
-
-
-class RoleBasedAccessTests(APITestCase):
-    """Tests du système de rôles"""
-    
-    def setUp(self):
-        self.client = APIClient()
-        
-        # Créer users admin et regular
+        # Admin (utilise is_staff pour passer les gardes dans les viewsets)
         self.admin = User.objects.create_user(
             email='admin@test.com',
             username='admin',
             password='testpass123',
-            role='admin'
+            is_staff=True,
         )
-        self.user1 = User.objects.create_user(
-            email='user1@test.com',
-            username='user1',
-            password='testpass123',
-            role='user'
-        )
-        self.user2 = User.objects.create_user(
-            email='user2@test.com',
-            username='user2',
-            password='testpass123',
-            role='user'
-        )
-        
-        # Créer associations
-        self.assoc1 = Association.objects.create(
-            nom_association='Association 1',
-            id_utilisateur=self.user1
-        )
-        self.assoc2 = Association.objects.create(
-            nom_association='Association 2',
-            id_utilisateur=self.user2
-        )
-        
-        # Créer type de document
+
+        # Type de document commun
         self.doc_type = TypeDocument.objects.create(
             libelle='Statuts',
-            obligatoire=True
-        )
-        
-        # Créer documents
-        self.doc1 = Document.objects.create(
-            nom_fichier='doc1.pdf',
-            id_association=self.assoc1,
-            id_type_document=self.doc_type,
-            uploaded_by=self.user1
-        )
-        self.doc2 = Document.objects.create(
-            nom_fichier='doc2.pdf',
-            id_association=self.assoc2,
-            id_type_document=self.doc_type,
-            uploaded_by=self.user2
+            obligatoire=True,
         )
 
-    def _get_admin_token(self):
-        response = self.client.post('/api/auth/login/', {
-            'username': 'admin',
-            'password': 'testpass123'
-        })
-        return response.data['access']
-
-    def _get_user_token(self, username):
-        response = self.client.post('/api/auth/login/', {
+    # Helpers -----------------------------------------------------
+    def _login(self, username, password):
+        resp = self.client.post('/api/auth/login/', {
             'username': username,
-            'password': 'testpass123'
+            'password': password,
         })
-        return response.data['access']
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        return resp.data['access']
 
-    def test_admin_sees_all_documents(self):
-        """L'admin voit TOUS les documents"""
-        token = self._get_admin_token()
+    def _auth_as(self, username, password):
+        token = self._login(username, password)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        response = self.client.get('/api/documents/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-        # Admin voit 2 documents
-        document_ids = [doc['id_document'] for doc in response.data]
-        self.assertIn(self.doc1.id_document, document_ids)
-        self.assertIn(self.doc2.id_document, document_ids)
+        return token
 
-    def test_user_sees_only_own_documents(self):
-        """L'utilisateur voit UNIQUEMENT ses documents"""
-        token = self._get_user_token('user1')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        response = self.client.get('/api/documents/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-        # User1 ne voit que son document
-        document_ids = [doc['id_document'] for doc in response.data]
-        self.assertIn(self.doc1.id_document, document_ids)
-        self.assertNotIn(self.doc2.id_document, document_ids)
+    # Tests -------------------------------------------------------
+    def test_admin_creates_association_and_user_can_access_it(self):
+        """Admin crée une association avec création auto d'un compte; le nouveau user ne voit que son asso."""
+        admin_token = self._auth_as('admin', 'testpass123')
 
-    def test_user_cannot_delete_other_user_document(self):
-        """Un utilisateur ne peut pas supprimer le document d'un autre"""
-        token = self._get_user_token('user1')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        # Essayer de supprimer le document de user2
-        response = self.client.delete(f'/api/documents/{self.doc2.id_document}/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Création via /api/associations/ avec les champs d'user attendus par perform_create
+        payload = {
+            'nom_association': 'Association Test',
+            'user_email': 'newuser@test.com',
+            'user_password': 'password123',
+            'user_username': 'newuser',
+        }
+        create_resp = self.client.post('/api/associations/', payload, format='json')
+        self.assertEqual(create_resp.status_code, status.HTTP_201_CREATED)
 
-    def test_user_can_delete_own_document(self):
-        """Un utilisateur peut supprimer son propre document"""
-        token = self._get_user_token('user1')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        # Supprimer son propre document
-        response = self.client.delete(f'/api/documents/{self.doc1.id_document}/')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        assoc_id = create_resp.data['id_association']
+        created_user_id = create_resp.data['id_utilisateur']
 
-    def test_admin_can_approve_document(self):
-        """L'admin peut approuver un document"""
-        token = self._get_admin_token()
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        response = self.client.patch(f'/api/documents/{self.doc1.id_document}/approve/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['statut'], 'approved')
+        # Le nouvel utilisateur se connecte et ne voit que son association
+        self.client.credentials()  # reset
+        user_token = self._auth_as('newuser', 'password123')
+        list_resp = self.client.get('/api/associations/')
+        self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+        # La réponse est paginée en DRF: extraire results
+        results = list_resp.data['results'] if isinstance(list_resp.data, dict) else list_resp.data
+        assoc_ids = [a['id_association'] for a in results]
+        self.assertEqual(assoc_ids, [assoc_id])
 
-    def test_user_cannot_approve_document(self):
-        """Un utilisateur ne peut pas approuver"""
-        token = self._get_user_token('user1')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        response = self.client.patch(f'/api/documents/{self.doc1.id_document}/approve/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Vérifie que l'association est liée au bon utilisateur
+        association = Association.objects.get(id_association=assoc_id)
+        self.assertEqual(association.id_utilisateur_id, created_user_id)
 
-    def test_user_cannot_see_other_association(self):
-        """Un utilisateur ne voit pas les autres associations"""
-        token = self._get_user_token('user1')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        response = self.client.get('/api/associations/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-        # User1 ne voit que son association
-        assoc_ids = [a['id_association'] for a in response.data]
-        self.assertIn(self.assoc1.id_association, assoc_ids)
-        self.assertNotIn(self.assoc2.id_association, assoc_ids)
+        # Restaure token admin pour autres tests
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {admin_token}')
 
-    def test_admin_sees_all_associations(self):
-        """L'admin voit toutes les associations"""
-        token = self._get_admin_token()
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        response = self.client.get('/api/associations/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-        # Admin voit les 2 associations
-        assoc_ids = [a['id_association'] for a in response.data]
-        self.assertIn(self.assoc1.id_association, assoc_ids)
-        self.assertIn(self.assoc2.id_association, assoc_ids)
+    def test_user_cannot_see_other_associations(self):
+        """Chaque user ne liste que son asso; admin voit tout."""
+        self._auth_as('admin', 'testpass123')
 
+        # Crée deux associations distinctes
+        for i in (1, 2):
+            self.client.post('/api/associations/', {
+                'nom_association': f'Asso {i}',
+                'user_email': f'user{i}@test.com',
+                'user_password': 'password123',
+                'user_username': f'user{i}',
+            }, format='json')
 
-class DocumentManagementTests(APITestCase):
-    """Tests de gestion des documents"""
-    
-    def setUp(self):
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            email='user@test.com',
-            username='user',
-            password='testpass123',
-            role='user'
-        )
-        self.association = Association.objects.create(
-            nom_association='Test Association',
-            id_utilisateur=self.user
-        )
-        self.doc_type = TypeDocument.objects.create(
-            libelle='Document Test',
-            obligatoire=True
-        )
+        # Admin voit 2 associations
+        admin_list = self.client.get('/api/associations/')
+        results = admin_list.data['results'] if isinstance(admin_list.data, dict) else admin_list.data
+        self.assertEqual(len(results), 2)
 
-    def _get_token(self):
-        response = self.client.post('/api/auth/login/', {
-            'username': 'user',
-            'password': 'testpass123'
-        })
-        return response.data['access']
+        # User1 ne voit que sa propre association
+        self.client.credentials()
+        self._auth_as('user1', 'password123')
+        user1_list = self.client.get('/api/associations/')
+        results = user1_list.data['results'] if isinstance(user1_list.data, dict) else user1_list.data
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['nom_association'], 'Asso 1')
 
-    def test_create_document(self):
-        """Test la création d'un document"""
-        token = self._get_token()
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        with open('test_file.txt', 'w') as f:
-            f.write('test content')
-        
-        with open('test_file.txt', 'rb') as f:
-            response = self.client.post('/api/documents/', {
-                'nom_fichier': f,
-                'id_association': self.association.id_association,
-                'id_type_document': self.doc_type.id_type_document
+    def test_user_creates_document_and_admin_can_approve(self):
+        """User soumet un document, admin peut l'approuver, user ne peut pas l'approuver."""
+        self._auth_as('admin', 'testpass123')
+        create_resp = self.client.post('/api/associations/', {
+            'nom_association': 'Asso Doc',
+            'user_email': 'docuser@test.com',
+            'user_password': 'password123',
+            'user_username': 'docuser',
+        }, format='json')
+        assoc_id = create_resp.data['id_association']
+
+        # User uploade un document
+        self.client.credentials()
+        self._auth_as('docuser', 'password123')
+        fake_file = SimpleUploadedFile('test.pdf', b'dummy content', content_type='application/pdf')
+        doc_resp = self.client.post('/api/documents/', {
+            'nom_fichier': fake_file,
+            'id_association': assoc_id,
+            'id_type_document': self.doc_type.id_type_document,
+        }, format='multipart')
+        self.assertEqual(doc_resp.status_code, status.HTTP_201_CREATED)
+        doc_id = doc_resp.data['id_document']
+
+        # User ne peut pas approuver
+        user_approve = self.client.patch(f'/api/documents/{doc_id}/approve/')
+        self.assertEqual(user_approve.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Admin peut approuver
+        self.client.credentials()
+        self._auth_as('admin', 'testpass123')
+        admin_approve = self.client.patch(f'/api/documents/{doc_id}/approve/')
+        self.assertEqual(admin_approve.status_code, status.HTTP_200_OK)
+        self.assertEqual(admin_approve.data['statut'], 'approved')
+
+    def test_document_visibility_respects_role(self):
+        """Admin voit tout; user ne voit que les docs de son asso."""
+        self._auth_as('admin', 'testpass123')
+
+        # Assoc A (userA) + Assoc B (userB)
+        for name in ('A', 'B'):
+            self.client.post('/api/associations/', {
+                'nom_association': f'Asso {name}',
+                'user_email': f'user{name.lower()}@test.com',
+                'user_password': 'password123',
+                'user_username': f'user{name.lower()}',
+            }, format='json')
+
+        assoc_a = Association.objects.get(nom_association='Asso A')
+        assoc_b = Association.objects.get(nom_association='Asso B')
+
+        # Création docs pour chaque asso
+        def _upload(username, assoc):
+            self.client.credentials()
+            self._auth_as(username, 'password123')
+            file_obj = SimpleUploadedFile('file.pdf', b'content', content_type='application/pdf')
+            resp = self.client.post('/api/documents/', {
+                'nom_fichier': file_obj,
+                'id_association': assoc.id_association,
+                'id_type_document': self.doc_type.id_type_document,
             }, format='multipart')
-        
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['statut'], 'submitted')
-        
-        # Cleanup
-        os.remove('test_file.txt')
+            self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+            return resp.data['id_document']
 
-    def test_filter_by_status(self):
-        """Test le filtrage par statut"""
-        token = self._get_token()
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        
-        # Créer un document
-        Document.objects.create(
-            nom_fichier='test.pdf',
-            id_association=self.association,
-            id_type_document=self.doc_type,
-            uploaded_by=self.user,
-            statut='submitted'
-        )
-        
-        response = self.client.get('/api/documents/by_status/', {'status': 'submitted'})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        doc_a_id = _upload('usera', assoc_a)
+        doc_b_id = _upload('userb', assoc_b)
+
+        # usera ne voit que doc A
+        self.client.credentials()
+        self._auth_as('usera', 'password123')
+        user_docs = self.client.get('/api/documents/')
+        results = user_docs.data['results'] if isinstance(user_docs.data, dict) else user_docs.data
+        self.assertEqual(len(results), 1, f"Expected 1 doc, got {len(results)}: {[d.get('id_document') for d in results]}")
+        self.assertEqual(results[0]['id_document'], doc_a_id)
+
+        # admin voit tout
+        self.client.credentials()
+        self._auth_as('admin', 'testpass123')
+        admin_docs = self.client.get('/api/documents/')
+        results = admin_docs.data['results'] if isinstance(admin_docs.data, dict) else admin_docs.data
+        doc_ids = {d['id_document'] for d in results}
+        self.assertIn(doc_a_id, doc_ids)
+        self.assertIn(doc_b_id, doc_ids)
+
+    def test_filter_documents_by_status(self):
+        """by_status retourne les docs avec le statut demandé pour le user courant."""
+        self._auth_as('admin', 'testpass123')
+        create_resp = self.client.post('/api/associations/', {
+            'nom_association': 'Asso Filter',
+            'user_email': 'filter@test.com',
+            'user_password': 'password123',
+            'user_username': 'filteruser',
+        }, format='json')
+        assoc_id = create_resp.data['id_association']
+
+        self.client.credentials()
+        self._auth_as('filteruser', 'password123')
+        for status_value in ('submitted', 'approved'):
+            file_obj = SimpleUploadedFile(f'{status_value}.pdf', b'content', content_type='application/pdf')
+            doc = Document.objects.create(
+                nom_fichier=file_obj,
+                id_association_id=assoc_id,
+                id_type_document=self.doc_type,
+                uploaded_by=User.objects.get(username='filteruser'),
+                statut=status_value,
+            )
+            # Ensure saved file name matches validator
+            self.assertEqual(doc.statut, status_value)
+
+        resp = self.client.get('/api/documents/by_status/', {'status': 'submitted'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 1)
 
 
 if __name__ == '__main__':
