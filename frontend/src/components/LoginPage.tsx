@@ -61,7 +61,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-gray-700 mb-2">
-                Nom d'utilisateur ou Email
+                Adresse Email
               </label>
               <input
                 id="email"
