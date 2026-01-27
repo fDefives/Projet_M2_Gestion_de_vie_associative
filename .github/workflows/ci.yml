@@ -179,11 +179,13 @@ jobs:
           npm run dev -- --host --port 3001 &
           sleep 12
 
-      # 🧪 Selenium
-      - name: Run Selenium tests
+      - name: Run pytest (API + Selenium)
         working-directory: backend
         run: |
-          pytest ../tests_selenium -v
+          pytest api/tests -v
+
+
+     
       
       
 
