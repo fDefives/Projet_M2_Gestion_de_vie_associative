@@ -4,6 +4,7 @@ from api.models import Association, AssociationType, Document, TypeDocument
 
 User = get_user_model()
 
+
 @pytest.mark.django_db
 def test_custom_user_email_unique():
     User.objects.create_user(username="u1", email="a@test.com", password="pass")

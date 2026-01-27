@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 
 User = get_user_model()
 
+
 @pytest.mark.django_db
 def test_user_cannot_access_other_association_documents():
     client = APIClient()

@@ -5,6 +5,7 @@ from api.models import Association, TypeDocument, Document
 
 User = get_user_model()
 
+
 @pytest.mark.django_db
 def test_only_admin_can_approve_document():
     client = APIClient()
