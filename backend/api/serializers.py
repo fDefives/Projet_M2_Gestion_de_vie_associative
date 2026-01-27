@@ -59,10 +59,11 @@ class AssociationSerializer(serializers.ModelSerializer):
 
 
 class MembreSerializer(serializers.ModelSerializer):
-    associations = serializers.StringRelatedField(
+    associations = serializers.PrimaryKeyRelatedField(
         many=True,
-        source='associations'
+        queryset=Association.objects.all(),
     )
+
 
     class Meta:
         model = Membre

@@ -11,4 +11,4 @@ selenium
 pytest
 pytest-django
 webdriver-manager
-
+drf-spectacular
