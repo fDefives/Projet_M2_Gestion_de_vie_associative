@@ -179,10 +179,12 @@ jobs:
           npm run dev -- --host --port 3001 &
           sleep 12
 
-      - name: Run pytest (API + Selenium)
+      - name: Run tests with coverage
         working-directory: backend
         run: |
-          pytest api/tests -v
+          coverage run -m pytest api/tests -v
+          coverage xml -o coverage.xml
+      
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
