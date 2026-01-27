@@ -1,6 +1,7 @@
 # gestion_vie_associative
 Plateforme pour gérer la vie associative à LRU
 
+[![Coverage](https://codecov.io/gh/Urgaar/gestion_vie_associative/branch/main/graph/badge.svg)](https://codecov.io/gh/Urgaar/gestion_vie_associative)
 
 ## 📦 Composants Clés
 
