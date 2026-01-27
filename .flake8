@@ -1,0 +1,19 @@
+[flake8]
+max-line-length = 88
+
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    .venv,
+    node_modules,
+    backend/api/migrations,
+    backend/api/management/commands,
+    backend/config,
+    selenium,
+    data_migration.py,
+    verify_implementation.py
+
+ignore =
+    E501,
+    W293
