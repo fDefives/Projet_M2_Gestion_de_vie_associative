@@ -352,7 +352,6 @@ class AssociationTypeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
 
-
 class RoleTypeViewSet(viewsets.ModelViewSet):
     """ViewSet pour les types de rôles"""
     queryset = RoleType.objects.all()
@@ -403,7 +402,8 @@ class MandatViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN
                 )
         
-        mandats = Mandat.objects.filter(association_id=association_id).select_related('membre', 'association', 'role_type')
+        mandats = Mandat.objects.filter(association_id=association_id).select_related('membre',
+                'association', 'role_type')
         serializer = self.get_serializer(mandats, many=True)
         return Response(serializer.data)
 
