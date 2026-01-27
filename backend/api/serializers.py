@@ -53,7 +53,7 @@ class AssociationSerializer(serializers.ModelSerializer):
         model = Association
         fields = ['id_association', 'nom_association', 'date_creation_association', 'ufr',
                   'statut', 'email_contact', 'insta_contact', 'tel_contact', 'num_siret',
-                  'desc_association', 'association_type', 'association_type_name', 'id_utilisateur', 
+                  'desc_association', 'association_type', 'association_type_name', 'id_utilisateur',
                   'user_email', 'created_at', 'updated_at']
         read_only_fields = ['id_association', 'created_at', 'updated_at']
 
@@ -101,7 +101,6 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = ['id_notification', 'date_envoi', 'sujet', 'message', 'type',
                   'id_association', 'is_read', 'created_at']
         read_only_fields = ['id_notification', 'date_envoi', 'created_at']
-
 
 
 class RoleTypeSerializer(serializers.ModelSerializer):
