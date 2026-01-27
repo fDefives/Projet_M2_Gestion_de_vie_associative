@@ -6,8 +6,10 @@ from django.contrib.auth import get_user_model
 from django.http import FileResponse
 import os
 
-from .models import Association, AssociationType, Membre, TypeDocument, Document, Notification
+from .models import Association, AssociationType, Membre, TypeDocument, Document, Notification, Mandat, RoleType
 from .serializers import (
+    MandatSerializer,
+    RoleTypeSerializer,
     CustomUserSerializer,
     CustomUserCreateSerializer,
     AssociationTypeSerializer,
@@ -348,3 +350,75 @@ class AssociationTypeViewSet(viewsets.ModelViewSet):
     queryset = AssociationType.objects.all()
     serializer_class = AssociationTypeSerializer
     permission_classes = [IsAdminOrReadOnly]
+
+
+
+class RoleTypeViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les types de rôles"""
+    queryset = RoleType.objects.all()
+    serializer_class = RoleTypeSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+
+class MandatViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les mandats - Gestion des rôles par association"""
+    queryset = Mandat.objects.all()
+    serializer_class = MandatSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Filtre les mandats selon le rôle"""
+        user = self.request.user
+        if user.is_staff:
+            return Mandat.objects.all().select_related('membre', 'association', 'role_type')
+        # Les utilisateurs ne voient que les mandats de leur association
+        return Mandat.objects.filter(
+            association__id_utilisateur=user
+        ).select_related('membre', 'association', 'role_type')
+
+    def perform_create(self, serializer):
+        """Crée un mandat"""
+        serializer.save()
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def by_association(self, request):
+        """Récupère les mandats d'une association spécifique"""
+        association_id = request.query_params.get('association_id')
+        
+        if not association_id:
+            return Response(
+                {"error": "association_id est requis"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not request.user.is_staff:
+            # Vérifie que l'utilisateur a accès à cette association
+            association = Association.objects.filter(
+                id_association=association_id,
+                id_utilisateur=request.user
+            ).first()
+            if not association:
+                return Response(
+                    {"error": "Accès refusé"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        mandats = Mandat.objects.filter(association_id=association_id).select_related('membre', 'association', 'role_type')
+        serializer = self.get_serializer(mandats, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def by_membre(self, request):
+        """Récupère les mandats d'un membre spécifique"""
+        membre_id = request.query_params.get('membre_id')
+        
+        if not membre_id:
+            return Response(
+                {"error": "membre_id est requis"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        queryset = self.get_queryset()
+        mandats = queryset.filter(membre_id=membre_id)
+        serializer = self.get_serializer(mandats, many=True)
+        return Response(serializer.data)

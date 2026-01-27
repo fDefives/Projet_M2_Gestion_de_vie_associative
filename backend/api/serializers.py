@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Association, AssociationType, Membre, TypeDocument, Document, Notification
+from .models import Association, AssociationType, Membre, TypeDocument, Document, Notification, Mandat, RoleType
 
 User = get_user_model()
 
@@ -101,3 +101,26 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = ['id_notification', 'date_envoi', 'sujet', 'message', 'type',
                   'id_association', 'is_read', 'created_at']
         read_only_fields = ['id_notification', 'date_envoi', 'created_at']
+
+
+
+class RoleTypeSerializer(serializers.ModelSerializer):
+    """Serializer pour les types de rôles"""
+    class Meta:
+        model = RoleType
+        fields = ['id', 'name', 'description', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class MandatSerializer(serializers.ModelSerializer):
+    """Serializer pour les mandats"""
+    membre_nom = serializers.CharField(source='membre.__str__', read_only=True)
+    association_nom = serializers.CharField(source='association.nom_association', read_only=True)
+    role_type_name = serializers.CharField(source='role_type.name', read_only=True)
+
+    class Meta:
+        model = Mandat
+        fields = ['id_mandat', 'membre', 'membre_nom', 'association', 'association_nom',
+                  'role_type', 'role_type_name', 'statut', 'date_debut', 'date_fin',
+                  'created_at', 'updated_at']
+        read_only_fields = ['id_mandat', 'created_at', 'updated_at']
