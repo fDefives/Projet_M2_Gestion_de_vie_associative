@@ -67,6 +67,43 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
         return user
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    """Serializer pour le changement de mot de passe"""
+    
+    old_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True)
+    new_password2 = serializers.CharField(write_only=True, required=True)
+
+    def validate_old_password(self, value):
+        """Vérifie que l'ancien mot de passe est correct"""
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("L'ancien mot de passe est incorrect.")
+        return value
+
+    def validate(self, data):
+        """Vérifie que les nouveaux mots de passe correspondent"""
+        if data['new_password'] != data['new_password2']:
+            raise serializers.ValidationError(
+                {"new_password": "Les nouveaux mots de passe ne correspondent pas."}
+            )
+        
+        # Optionnel : vérifier que le nouveau mot de passe est différent de l'ancien
+        if data['old_password'] == data['new_password']:
+            raise serializers.ValidationError(
+                {"new_password": "Le nouveau mot de passe doit être différent de l'ancien."}
+            )
+        
+        return data
+
+    def save(self, **kwargs):
+        """Change le mot de passe de l'utilisateur"""
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
+
+
 class AssociationTypeSerializer(serializers.ModelSerializer):
     """Serializer pour les types d'associations"""
 

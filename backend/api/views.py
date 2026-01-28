@@ -12,6 +12,7 @@ from .serializers import (
     RoleTypeSerializer,
     CustomUserSerializer,
     CustomUserCreateSerializer,
+    ChangePasswordSerializer,
     AssociationTypeSerializer,
     AssociationSerializer,
     MembreSerializer,
@@ -38,6 +39,8 @@ class UserRegistrationView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return CustomUserCreateSerializer
+        elif self.action == 'change_password':
+            return ChangePasswordSerializer
         return CustomUserSerializer
 
     @action(detail=False, methods=['post'], permission_classes=[])
@@ -57,6 +60,31 @@ class UserRegistrationView(viewsets.ModelViewSet):
         """Retourne les infos de l'utilisateur connecté"""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def change_password(self, request):
+        """
+        Endpoint pour changer le mot de passe de l'utilisateur connecté
+        
+        POST /api/users/change_password/
+        Body: {
+            "old_password": "ancien_mot_de_passe",
+            "new_password": "nouveau_mot_de_passe",
+            "new_password2": "nouveau_mot_de_passe"
+        }
+        """
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "Mot de passe changé avec succès"},
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
