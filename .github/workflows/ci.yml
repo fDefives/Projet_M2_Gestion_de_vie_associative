@@ -18,7 +18,7 @@ jobs:
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -30,7 +30,7 @@ jobs:
     env:
       DB_NAME: test_db
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_HOST: localhost
       DB_PORT: 5432
       DJANGO_SETTINGS_MODULE: config.settings
@@ -77,7 +77,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm install
+        run: npm install --ignore-scripts
 
       - name: Lint frontend
         working-directory: frontend
@@ -104,7 +104,8 @@ jobs:
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
         ports:
           - 5432:5432
         options: >-
@@ -116,7 +117,7 @@ jobs:
     env:
       DB_NAME: test_db
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_HOST: localhost
       DB_PORT: 5432
       DJANGO_SETTINGS_MODULE: config.settings
@@ -171,7 +172,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm install
+        run: npm install --ignore-scripts
 
       - name: Start frontend
         working-directory: frontend

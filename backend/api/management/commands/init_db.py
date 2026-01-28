@@ -7,21 +7,21 @@ from api.models import Association, TypeDocument
 
 User = get_user_model()
 
-
+email_admin="admin@example.com"
 class Command(BaseCommand):
     help = 'Initialize database with test data'
 
     def handle(self, *args, **options):
         self.stdout.write('Initializing database...')
 
-        admin_existing = User.objects.filter(email='admin@example.com').first()
+        admin_existing = User.objects.filter(email=email_admin).first()
         if admin_existing:
             Association.objects.filter(id_utilisateur=admin_existing).delete()
             admin_existing.delete()
 
         admin = User.objects.create_superuser(
-            username='admin@example.com',
-            email='admin@example.com',
+            username=email_admin,
+            email=email_admin,
             password='admin123'
         )
         admin.role = 'admin'

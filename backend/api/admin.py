@@ -92,23 +92,46 @@ class AssociationTypeAdmin(admin.ModelAdmin):
 # =========================
 # MEMBRES
 # =========================
+# =========================
+# MEMBRES
+# =========================
 @admin.register(Membre)
 class MembreAdmin(admin.ModelAdmin):
-    list_display = ('prenom', 'nom', 'email', 'statut_membre')
+    list_display = (
+        'prenom',
+        'nom',
+        'date_of_birth',   # 🎂 Date d'anniversaire
+        'statut_membre',
+    )
+
     list_filter = ('statut_membre',)
-    search_fields = ['nom', 'prenom', 'email']
+    search_fields = ('nom', 'prenom')
+
     readonly_fields = ('date_adhesion', 'created_at', 'updated_at')
 
     fieldsets = (
-        (None, {'fields': ('prenom', 'nom')}),
-        ('Contact', {'fields': ('email', 'tel')}),
-        ('Adhésion', {'fields': ('date_fin_adhesion', 'statut_membre')}),
+        (None, {
+            'fields': (
+                'prenom',
+                'nom',
+                'date_of_birth',   # 🎂 ici aussi
+            )
+        }),
+        ('Adhésion', {
+            'fields': (
+                'date_fin_adhesion',
+                'statut_membre',
+            )
+        }),
         ('Dates', {
-            'fields': ('date_adhesion', 'created_at', 'updated_at'),
+            'fields': (
+                'date_adhesion',
+                'created_at',
+                'updated_at',
+            ),
             'classes': ('collapse',)
         }),
     )
-
 
 # =========================
 # TYPES DE RÔLE

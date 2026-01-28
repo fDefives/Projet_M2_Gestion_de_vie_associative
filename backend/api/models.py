@@ -18,7 +18,7 @@ class CustomUser(AbstractUser):
 
 class RoleType(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -29,12 +29,12 @@ class RoleType(models.Model):
 
 class AssociationType(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
-    
+
 
 class Association(models.Model):
     """Modèle association"""
@@ -43,17 +43,17 @@ class Association(models.Model):
         ('inactive', 'Inactive'),
         ('suspended', 'Suspendue'),
     ]
-    
+
     id_association = models.AutoField(primary_key=True)
     nom_association = models.CharField(max_length=255)
     date_creation_association = models.DateField(auto_now_add=True)
-    num_siret = models.CharField(max_length=14, blank=True, null=True)
-    desc_association = models.TextField(blank=True, null=True)
-    ufr = models.CharField(max_length=100, blank=True, null=True)
+    num_siret = models.CharField(max_length=14, blank=True)
+    desc_association = models.TextField(blank=True)
+    ufr = models.CharField(max_length=100, blank=True)
     statut = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     email_contact = models.EmailField(blank=True, null=True)
-    insta_contact = models.CharField(max_length=255, blank=True, null=True)
-    tel_contact = models.CharField(max_length=20, blank=True, null=True)
+    insta_contact = models.CharField(max_length=255, blank=True)
+    tel_contact = models.CharField(max_length=20, blank=True)
     id_utilisateur = models.OneToOneField(CustomUser, on_delete=models.CASCADE, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -67,7 +67,7 @@ class Association(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return self.nom_association
 
@@ -82,11 +82,20 @@ class Membre(models.Model):
     id_membre = models.AutoField(primary_key=True)
     prenom = models.CharField(max_length=100)
     nom = models.CharField(max_length=100)
-    date_of_birth = models.DateField(blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-    tel = models.CharField(max_length=20, blank=True, null=True)
+
+    # ✅ Date d'anniversaire
+    date_of_birth = models.DateField(
+        verbose_name="Date de naissance",
+        blank=True,
+        null=True
+    )
+
     date_adhesion = models.DateField(auto_now_add=True)
-    statut_membre = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+    statut_membre = models.CharField(
+        max_length=50,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
     date_fin_adhesion = models.DateField(blank=True, null=True)
 
     associations = models.ManyToManyField(
@@ -97,13 +106,12 @@ class Membre(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.prenom} {self.nom}"
-
 
 class TypeDocument(models.Model):
     """Modèle type de document"""
@@ -112,10 +120,10 @@ class TypeDocument(models.Model):
     obligatoire = models.BooleanField(default=False)
     duree_validite_mois = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['libelle']
-    
+
     def __str__(self):
         return self.libelle
 
@@ -129,7 +137,7 @@ class Document(models.Model):
         ('rejected', 'Rejeté'),
         ('expired', 'Expiré'),
     ]
-    
+
     id_document = models.AutoField(primary_key=True)
     nom_fichier = models.FileField(
         upload_to='documents/%Y/%m/%d/',
@@ -145,16 +153,16 @@ class Document(models.Model):
     date_depot = models.DateTimeField(auto_now_add=True)
     date_expiration = models.DateField(blank=True, null=True)
     statut = models.CharField(max_length=30, choices=STATUS_CHOICES, default='submitted')
-    commentaire_refus = models.TextField(blank=True, null=True)
+    commentaire_refus = models.TextField(blank=True)
     id_association = models.ForeignKey(Association, on_delete=models.CASCADE, related_name='documents')
     id_type_document = models.ForeignKey(TypeDocument, on_delete=models.SET_NULL, null=True)
     uploaded_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='documents_uploaded')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-date_depot']
-    
+
     def __str__(self):
         return f"{self.nom_fichier} - {self.id_association}"
 

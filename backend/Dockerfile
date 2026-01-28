@@ -6,12 +6,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Dépendances système + Chrome
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
     bash \
-    wget \
-    gnupg \
     ca-certificates \
+    curl \
     fonts-liberation \
+    gnupg \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -35,8 +36,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxfixes3 \
     libxrandr2 \
+    wget \
     xdg-utils \
- && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
+ && curl --fail --silent --show-error --location \
+    https://dl.google.com/linux/linux_signing_key.pub \
     | gpg --dearmor -o /usr/share/keyrings/google.linux.gpg \
  && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google.linux.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
     > /etc/apt/sources.list.d/google-chrome.list \
