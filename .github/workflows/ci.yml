@@ -54,8 +54,8 @@ jobs:
       - name: Migrate database
         working-directory: backend
         run: |
-          python manage.py makemigrations
-          python manage.py migrate
+          python manage.py makemigrations --noinput
+          python manage.py migrate --noinput
 
       - name: Run tests with coverage
         working-directory: backend
@@ -143,7 +143,7 @@ jobs:
       - name: Migrate database
         working-directory: backend
         run: |
-          python manage.py migrate
+          python manage.py migrate --noinput
 
       - name: Create admin user
         working-directory: backend
