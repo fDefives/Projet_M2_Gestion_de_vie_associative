@@ -100,7 +100,7 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-gray-900">{association.name}</h1>
+              <h1 className="text-gray-900">{association.nom_association}</h1>
               <p className="text-sm text-gray-600">Espace association</p>
             </div>
 
@@ -427,18 +427,18 @@ function AssociationOverviewTab({ association, documents, leaders }: any) {
           </div>
           <div>
             <div className="text-blue-700">Email</div>
-            <div className="text-blue-900">{association.email}</div>
+            <div className="text-blue-900">{association.email_contact}</div>
           </div>
-          {association.phone && (
+          {association.tel_contact && (
             <div>
               <div className="text-blue-700">Téléphone</div>
-              <div className="text-blue-900">{association.phone}</div>
+              <div className="text-blue-900">{association.tel_contact}</div>
             </div>
           )}
-          {association.siret && (
+          {association.num_siret && (
             <div className="col-span-2">
               <div className="text-blue-700">SIRET</div>
-              <div className="text-blue-900">{association.siret}</div>
+              <div className="text-blue-900">{association.num_siret}</div>
             </div>
           )}
         </div>

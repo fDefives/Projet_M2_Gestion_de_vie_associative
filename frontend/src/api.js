@@ -582,6 +582,47 @@ export const deleteMandat = async (id) => {
   }
 };
 
+// ============= MEMBRES =============
+
+/**
+ * Récupérer tous les membres
+ */
+export const getMembres = async () => {
+  try {
+    const response = await api.get('/membres/');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des membres:', error);
+    throw error;
+  }
+};
+
+/**
+ * Créer un membre
+ */
+export const createMembre = async (membreData) => {
+  try {
+    const response = await api.post('/membres/', membreData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la création du membre:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mettre à jour un membre
+ */
+export const updateMembre = async (id, membreData) => {
+  try {
+    const response = await api.patch(`/membres/${id}/`, membreData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du membre:', error);
+    throw error;
+  }
+};
+
 // ============= NOTIFICATIONS =============
 
 /**
@@ -619,6 +660,86 @@ export const markNotificationsAsRead = async (ids) => {
     return response.data;
   } catch (error) {
     console.error('Erreur lors du marquage des notifications:', error);
+    throw error;
+  }
+};
+
+// ============= TYPES (PARAMÈTRES) =============
+
+/**
+ * Créer un type d'association
+ */
+export const createAssociationType = async (typeData) => {
+  try {
+    const response = await api.post('/association-types/', typeData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la création du type d\'association:', error);
+    throw error;
+  }
+};
+
+/**
+ * Créer un type de document
+ */
+export const createDocumentType = async (typeData) => {
+  try {
+    const response = await api.post('/type-documents/', typeData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la création du type de document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mettre à jour un type de document
+ */
+export const updateDocumentType = async (id, typeData) => {
+  try {
+    const response = await api.patch(`/type-documents/${id}/`, typeData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du type de document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprimer un type d'association
+ */
+export const deleteAssociationType = async (id) => {
+  try {
+    const response = await api.delete(`/association-types/${id}/`);
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du type d\'association:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprimer un type de document
+ */
+export const deleteDocumentType = async (id) => {
+  try {
+    const response = await api.delete(`/type-documents/${id}/`);
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du type de document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprimer un type de rôle
+ */
+export const deleteRoleType = async (id) => {
+  try {
+    const response = await api.delete(`/role-types/${id}/`);
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du type de rôle:', error);
     throw error;
   }
 };

@@ -133,7 +133,12 @@ class AssociationViewSet(viewsets.ModelViewSet):
     def members(self, request, pk=None):
         """Récupère tous les membres d'une association"""
         association = self.get_object()
-        members = association.membres.all()
+
+        # Vérifie l'accès pour les non-admins
+        if not request.user.is_staff and association.id_utilisateur != request.user:
+            return Response({"detail": "Accès refusé"}, status=status.HTTP_403_FORBIDDEN)
+
+        members = Membre.objects.filter(mandats__association_id=pk).distinct()
         serializer = MembreSerializer(members, many=True)
         return Response(serializer.data)
 
@@ -366,14 +371,22 @@ class MandatViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Filtre les mandats selon le rôle"""
+        """Filtre les mandats selon le rôle et l'association passée en query param"""
         user = self.request.user
+        association_id = self.request.query_params.get('association_id')
+
         if user.is_staff:
-            return Mandat.objects.all().select_related('membre', 'association', 'role_type')
-        # Les utilisateurs ne voient que les mandats de leur association
-        return Mandat.objects.filter(
-            association__id_utilisateur=user
-        ).select_related('membre', 'association', 'role_type')
+            qs = Mandat.objects.all().select_related('membre', 'association', 'role_type')
+        else:
+            # Les utilisateurs ne voient que les mandats de leur association
+            qs = Mandat.objects.filter(
+                association__id_utilisateur=user
+            ).select_related('membre', 'association', 'role_type')
+
+        if association_id:
+            qs = qs.filter(association_id=association_id)
+
+        return qs
 
     def perform_create(self, serializer):
         """Crée un mandat"""

@@ -305,7 +305,7 @@ export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOver
           <div className="space-y-2">
             {incompleteAssociations.slice(0, 5).map((association) => (
               <button
-                key={association.id}
+                key={association.id_association}
                 onClick={() => onSelectAssociation(association)}
                 className="w-full flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
               >
