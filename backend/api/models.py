@@ -113,6 +113,7 @@ class Membre(models.Model):
     def __str__(self):
         return f"{self.prenom} {self.nom}"
 
+
 class TypeDocument(models.Model):
     """Modèle type de document"""
     id_type_document = models.AutoField(primary_key=True)

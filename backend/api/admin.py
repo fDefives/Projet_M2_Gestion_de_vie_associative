@@ -133,6 +133,7 @@ class MembreAdmin(admin.ModelAdmin):
         }),
     )
 
+
 # =========================
 # TYPES DE RÔLE
 # =========================
