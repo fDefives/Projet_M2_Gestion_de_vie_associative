@@ -1,82 +1,207 @@
-"""
-Management command to initialize the database with test users and associations
-"""
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from api.models import Association, TypeDocument
+from api.models import (
+    Association, AssociationType, TypeDocument,
+    Membre, Mandat, RoleType
+)
+from datetime import date
 
 User = get_user_model()
 
-email_admin="admin@example.com"
+
 class Command(BaseCommand):
-    help = 'Initialize database with test data'
+    help = "Initialize database with default data (safe, idempotent)"
 
     def handle(self, *args, **options):
-        self.stdout.write('Initializing database...')
-
-        admin_existing = User.objects.filter(email=email_admin).first()
-        if admin_existing:
-            Association.objects.filter(id_utilisateur=admin_existing).delete()
-            admin_existing.delete()
-
-        admin = User.objects.create_superuser(
-            username=email_admin,
-            email=email_admin,
-            password='admin123'
-        )
-        admin.role = 'admin'
-        admin.is_staff = True
-        admin.save()
-        self.stdout.write(self.style.SUCCESS('✓ Admin user created'))
-
-        test_users = [
-            {'email': 'user1@example.com', 'username': 'user1', 'password': 'pass123'},
-            {'email': 'user2@example.com', 'username': 'user2', 'password': 'pass123'},
-        ]
-
-        for user_data in test_users:
-            if not User.objects.filter(email=user_data['email']).exists():
-                User.objects.create_user(
-                    username=user_data['username'],
-                    email=user_data['email'],
-                    password=user_data['password'],
-                    role='user'
+        # ======================================================
+        # GARDE-FOU : base déjà initialisée
+        # ======================================================
+        if AssociationType.objects.exists():
+            self.stdout.write(
+                self.style.WARNING(
+                    "Database already initialized. Skipping init_db."
                 )
-                self.stdout.write(
-                    self.style.SUCCESS(f'✓ User {user_data["email"]} created')
-                )
-
-        admin_user = User.objects.get(email='admin@example.com')
-
-        if not Association.objects.filter(nom_association='Association Test 1').exists():
-            Association.objects.create(
-                nom_association='Association Test 1',
-                ufr='UFR Sciences',
-                statut='active',
-                email_contact='test1@association.fr',
-                tel_contact='01234567890',
-                id_utilisateur=admin_user
             )
-            self.stdout.write(self.style.SUCCESS('✓ Association 1 created'))
+            return
 
-        doc_types = [
-            {'libelle': 'Statuts', 'obligatoire': True, 'duree_validite_mois': None},
-            {'libelle': 'Assurance', 'obligatoire': True, 'duree_validite_mois': 12},
-            {'libelle': 'Budget', 'obligatoire': False, 'duree_validite_mois': 12},
-            {'libelle': 'Rapport', 'obligatoire': False, 'duree_validite_mois': None},
+        self.stdout.write("Initializing database...")
+
+        # ======================================================
+        # ADMIN
+        # ======================================================
+        admin, created = User.objects.get_or_create(
+            email="admin@example.com",
+            defaults={
+                "username": "admin@example.com",
+                "is_staff": True,
+                "is_superuser": True,
+                "role": "admin",
+            },
+        )
+
+        if created:
+            admin.set_password("admin123")
+            admin.save()
+            self.stdout.write(self.style.SUCCESS("✓ Admin user created"))
+        else:
+            self.stdout.write("✓ Admin user already exists")
+
+        # ======================================================
+        # TYPES D’ASSOCIATION
+        # ======================================================
+        assoc_types = [
+            "Écologie", "Culture", "Solidarité",
+            "Musique", "International", "Sport", "Histoire"
         ]
 
-        for doc_type in doc_types:
-            if not TypeDocument.objects.filter(
-                libelle=doc_type['libelle']
-            ).exists():
-                TypeDocument.objects.create(**doc_type)
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f'✓ Document type {doc_type["libelle"]} created'
-                    )
+        assoc_type_map = {}
+        for name in assoc_types:
+            at, _ = AssociationType.objects.get_or_create(name=name)
+            assoc_type_map[name] = at
+
+        self.stdout.write(self.style.SUCCESS("✓ Association types created"))
+
+        # ======================================================
+        # ASSOCIATIONS
+        # ======================================================
+        associations = [
+            ("BLAIROUDEURS", "blairoudeurs.larochelle@gmail.com",
+             "Protection de l’environnement.", "Maison des Étudiants", "Écologie"),
+            ("CULTIVE TA TÊTE ET TON ASSIETTE", "ctta.univlr@gmail.com",
+             "Potager universitaire.", "IUT La Rochelle", "Écologie"),
+            ("PRIMROSE", "projet.primrose@gmail.com",
+             "Protections hygiéniques écologiques.", "Avenue Michel Crépeau", "Solidarité"),
+            ("LES RUCHELAISES", "lesruchelaises.lru@gmail.com",
+             "Apiculture et ateliers.", "La Rochelle", "Écologie"),
+            ("ENSEMBLE MUSICAL UNIVERSITAIRE", "contact.emulr@gmail.com",
+             "Groupe de musique étudiant.", "Maison des Étudiants", "Musique"),
+            ("ESN LA ROCHELLE", "contact@esnlarochelle.org",
+             "Accueil des étudiants internationaux.", "Maison des Étudiants", "International"),
+            ("LEMONSEA", "webmaster.lemonsea@gmail.com",
+             "ONG sur l’acidification des océans.", "26 Rue de la Gloire", "Écologie"),
+            ("UNI'VERT", "univert.lr@gmail.com",
+             "Sensibilisation écologique.", "39 Rue François de Vaux", "Écologie"),
+            ("LEGIO XX VALERIA VICTRIX", "valeriavictrix.legio.xx@gmail.com",
+             "Reconstitution romaine.", "La Rochelle", "Histoire"),
+        ]
+
+        assoc_map = {}
+        for name, email, desc, ufr, type_name in associations:
+            assoc, _ = Association.objects.get_or_create(
+                nom_association=name,
+                defaults={
+                    "email_contact": email,
+                    "desc_association": desc,
+                    "ufr": ufr,
+                    "association_type": assoc_type_map[type_name],
+                },
+            )
+            assoc_map[name] = assoc
+
+        self.stdout.write(self.style.SUCCESS("✓ Associations created"))
+
+        # ======================================================
+        # TYPES DE RÔLES
+        # ======================================================
+        role_names = [
+            "Président", "Vice-président", "Trésorier",
+            "Vice-trésorier", "Secrétaire", "Administrateur",
+            "Communication", "Responsable image", "Membre",
+            "Co-président"
+        ]
+
+        role_map = {}
+        for r in role_names:
+            role, _ = RoleType.objects.get_or_create(name=r)
+            role_map[r.lower()] = role
+
+        self.stdout.write(self.style.SUCCESS("✓ Role types created"))
+
+        # ======================================================
+        # MEMBRES + MANDATS
+        # ======================================================
+        DATA = {
+            "BLAIROUDEURS": [
+                ("Audrey", "Dubois", "Président"),
+                ("Mathieu", "Cazin", "Trésorier"),
+                ("Line", "Rolland Guillard", "Secrétaire"),
+                ("Paul", "Cacot", "Administrateur"),
+            ],
+            "PRIMROSE": [
+                ("Julia", "Mourgues", "Président"),
+                ("Justine", "Galaup", "Vice-président"),
+                ("Callixte", "Montezin", "Secrétaire"),
+                ("François", "Defive", "Trésorier"),
+            ],
+            "LES RUCHELAISES": [
+                ("Marcel", "Devynck", "Président"),
+            ],
+            "ENSEMBLE MUSICAL UNIVERSITAIRE": [
+                ("Baptiste", "Belisaire", "Président"),
+            ],
+            "ESN LA ROCHELLE": [
+                ("Ange", "Magnard", "Président"),
+                ("Charline", "Nobili", "Trésorier"),
+                ("Tania", "Mihala", "Vice-président"),
+                ("Eva", "Laffargue", "Secrétaire"),
+            ],
+            "LEMONSEA": [
+                ("Louxandra", "Combes", "Président"),
+                ("Jeanne", "Dumas", "Vice-président"),
+                ("Evie", "Bagard", "Secrétaire"),
+                ("Elfi", "Duivon", "Trésorier"),
+            ],
+            "UNI'VERT": [
+                ("Lucas", "Pibouleau", "Président"),
+                ("Romain", "Witz", "Vice-président"),
+                ("Pauline", "Cheval", "Secrétaire"),
+                ("Hugo", "Pierre", "Trésorier"),
+                ("Jules", "Cressiot", "Vice-trésorier"),
+            ],
+            "LEGIO XX VALERIA VICTRIX": [
+                ("Antonin", "Pacquet", "Co-président"),
+                ("Emile", "Thelliere", "Co-président"),
+            ],
+        }
+
+        for assoc_name, members in DATA.items():
+            association = assoc_map.get(assoc_name)
+            if not association:
+                continue
+
+            for first, last, role in members:
+                membre, _ = Membre.objects.get_or_create(
+                    prenom=first,
+                    nom=last,
                 )
+
+                Mandat.objects.get_or_create(
+                    membre=membre,
+                    association=association,
+                    role_type=role_map[role.lower()],
+                    defaults={
+                        "statut": "active",
+                        "date_debut": date.today(),
+                    },
+                )
+
+        self.stdout.write(self.style.SUCCESS("✓ Members & mandates created"))
+
+        # ======================================================
+        # TYPES DE DOCUMENTS
+        # ======================================================
+        doc_types = [
+            {"libelle": "Statuts", "obligatoire": True},
+            {"libelle": "Assurance", "obligatoire": True, "duree_validite_mois": 12},
+            {"libelle": "Budget", "obligatoire": False},
+            {"libelle": "Rapport", "obligatoire": False},
+        ]
+
+        for doc in doc_types:
+            TypeDocument.objects.get_or_create(**doc)
+
+        self.stdout.write(self.style.SUCCESS("✓ Document types created"))
 
         self.stdout.write(
-            self.style.SUCCESS('\n✓ Database initialized successfully!')
+            self.style.SUCCESS("\n✓ Database initialized successfully!")
         )
