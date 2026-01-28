@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
 import * as API from '../../api';
+import { MandatsManager } from './MandatsManager';
 
 interface AssociationData {
   id_association: number;
@@ -90,6 +91,7 @@ const DOCUMENT_TYPES: Record<string, { label: string }> = {
 };
 
 export function AssociationDetailView({ association, onBack, onDataChanged }: AssociationDetailViewProps) {
+  const associationId = association.id_association || association.id;
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
@@ -101,6 +103,19 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
   const [error, setError] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const loadMembers = async (id: number) => {
+    try {
+      const membersResponse = await API.getAssociationMembers(id);
+      const membersArray = Array.isArray(membersResponse)
+        ? membersResponse
+        : membersResponse?.results || [];
+      setAssociationMembers(membersArray);
+    } catch (err) {
+      console.error('Error loading association members:', err);
+      setAssociationMembers([]);
+    }
+  };
 
   // Load association documents, members, and full details
   useEffect(() => {
@@ -116,11 +131,11 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
         // Load all documents and filter by association
         const docsResponse = await API.getDocuments();
         const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
-        const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
+        const filteredDocs = docs.filter((d: any) => d.id_association === associationId);
         setAssociationDocs(filteredDocs);
 
         // Load members for this association
-        setAssociationMembers([]);
+        await loadMembers(associationId);
       } catch (err) {
         console.error('Error loading association data:', err);
         setError('Erreur lors du chargement des données');
@@ -130,7 +145,7 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
     };
 
     loadData();
-  }, [association.id_association || association.id]);
+  }, [associationId]);
 
   const handleValidateDocument = (doc: DocumentData) => {
     setSelectedDocument(doc);
@@ -222,12 +237,12 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
 
   const completionRate = Math.round((approvedDocsByType / documentStats.total) * 100);
   
-  const displayName = association.nom_association || association.name;
+  const displayName = association.nom_association;
   const displayUFR = association.ufr;
   const displaySiret = association.num_siret;
-  const displayStatus = association.statut || association.status;
-  const displayEmail = association.email_contact || association.email;
-  const displayPhone = association.tel_contact || association.phone;
+  const displayStatus = association.statut;
+  const displayEmail = association.email_contact;
+  const displayPhone = association.tel_contact;
 
   // Use association details with fallback to association prop
   const displayAssociation = { ...association, ...associationDetails };
@@ -301,25 +316,21 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
                   <span>{displayAssociation.insta_contact || displayAssociation.insta}</span>
                 </div>
               )}
-              
-              {(displayAssociation.desc_association || displayAssociation.description) && (
-                <div className="col-span-2 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-sm font-medium text-gray-700 mb-2">Description</div>
-                  <div className="text-sm text-gray-600 whitespace-pre-wrap">{displayAssociation.desc_association || displayAssociation.description}</div>
-                </div>
-              )}
             </div>
+            
+            {(displayAssociation.desc_association || displayAssociation.description) && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-sm font-medium text-gray-700 mb-2">Description</div>
+                <div className="text-sm text-gray-600 whitespace-pre-wrap">{displayAssociation.desc_association || displayAssociation.description}</div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-end gap-3">
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300">
-                <Mail className="w-4 h-4" />
-                Envoyer un email
-              </button>
               <button 
                 onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
                 Modifier
@@ -431,11 +442,17 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
               )}
 
               {activeTab === 'leaders' && (
-                <LeadersTab associationId={association.id_association || association.id} />
+                <MandatsManager
+                  associationId={associationId}
+                  onDataChanged={async () => {
+                    await loadMembers(associationId);
+                    onDataChanged?.();
+                  }}
+                />
               )}
 
               {activeTab === 'history' && (
-                <HistoryTab associationId={association.id_association || association.id} />
+                <HistoryTab associationId={associationId} />
               )}
             </>
           )}
@@ -444,9 +461,12 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
 
       {/* Validation Modal */}
       {showValidationModal && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Validation du document</h2>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}
+        >
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Validation du document</h2>
 
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Document</div>
@@ -488,15 +508,24 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setShowValidationModal(false);
-                setRejectionReason('');
-              }}
-              className="w-full mt-4 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              Annuler
-            </button>
+            <div className="h-6" />
+            <div className="flex gap-4 mt-2">
+              <button
+                onClick={() => {
+                  setShowValidationModal(false);
+                  setRejectionReason('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleApproveDocument}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Valider
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1049,15 +1078,15 @@ interface EditAssociationModalProps {
 
 function EditAssociationModal({ association, onClose, onSuccess }: EditAssociationModalProps) {
   const [formData, setFormData] = useState({
-    nom_association: association.nom_association || association.name || '',
+    nom_association: association.nom_association || '',
     ufr: association.ufr || '',
-    email_contact: association.email_contact || association.email || '',
-    tel_contact: association.tel_contact || association.phone || '',
-    num_siret: association.num_siret || association.siret || '',
+    email_contact: association.email_contact || '',
+    tel_contact: association.tel_contact || '',
+    num_siret: association.num_siret || '',
     insta_contact: association.insta_contact || '',
-    desc_association: association.desc_association || association.description || '',
-    statut: association.statut || association.status || 'active',
-    association_type: association.association_type || association.id || '',
+    desc_association: association.desc_association || '',
+    statut: association.statut || 'active',
+    association_type: association.association_type || '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

@@ -5,6 +5,7 @@ import { User } from '../App';
 import { AssociationsList } from './admin/AssociationsList';
 import { AssociationDetailView } from './admin/AssociationDetailView';
 import { StatsOverview } from './admin/StatsOverview';
+import { SettingsPanel } from './admin/SettingsPanel';
 import * as API from '../api';
 
 interface AdminDashboardProps {
@@ -442,10 +443,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
             )}
 
             {currentView === 'settings' && (
-              <div className="bg-white rounded-xl shadow-sm p-8">
-                <h2 className="text-gray-900 mb-4">Paramètres</h2>
-                <p className="text-gray-600">Configuration en cours de développement...</p>
-              </div>
+              <SettingsPanel />
             )}
           </main>
         </div>

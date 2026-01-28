@@ -34,20 +34,19 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
         console.log('Associations chargées:', assoArray);
         // Convertir les données de la BDD au format attendu
         const formatted = assoArray.map((asso: any) => ({
-          id: asso.id_association,
-          name: asso.nom_association,
+          id_association: asso.id_association,
+          nom_association: asso.nom_association,
           ufr: asso.ufr,
-          type: asso.statut,
-          status: asso.statut,
+          statut: asso.statut,
           associationType: asso.association_type,
           associationTypeName: asso.association_type_name,
           president: 'Unknown',
           memberCount: 0,
           completionRate: 0,
           missingDocuments: 0,
-          email: asso.email_contact,
-          phone: asso.tel_contact,
-          siret: asso.num_siret,
+          email_contact: asso.email_contact,
+          tel_contact: asso.tel_contact,
+          num_siret: asso.num_siret,
         }));
         console.log('Associations formatées:', formatted);
         setAssociations(formatted);
@@ -79,7 +78,7 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
     const docs = documents;
     let result = associations.map((a) => {
       // Récupérer les documents de cette association
-      const associationDocs = docs.filter((d) => d.id_association === a.id);
+      const associationDocs = docs.filter((d) => d.id_association === a.id_association);
       const hasDocs = associationDocs.length > 0;
 
       // Compter les documents approuvés par type requis
@@ -103,9 +102,9 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
     if (searchQuery) {
       result = result.filter(
         (a) =>
-          a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          a.nom_association.toLowerCase().includes(searchQuery.toLowerCase()) ||
           a.ufr.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          a.type.toLowerCase().includes(searchQuery.toLowerCase())
+          a.statut.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -126,7 +125,7 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
     // Sort
     result.sort((a, b) => {
       if (sortField === 'name') {
-        return a.name.localeCompare(b.name);
+        return a.nom_association.localeCompare(b.nom_association);
       } else if (sortField === 'completion') {
         return b.completionRate - a.completionRate;
       } else if (sortField === 'missing') {
@@ -232,11 +231,11 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
       {/* Associations List */}
       <div className="space-y-3">
         {filteredAndSortedAssociations.map((association) => {
-          const statusBadge = getStatusBadge(association.status);
+          const statusBadge = getStatusBadge(association.statut);
           
           return (
             <button
-              key={association.id}
+              key={association.id_association}
               onClick={() => onSelectAssociation(association)}
               className="w-full bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-gray-200 hover:border-blue-300"
             >
@@ -256,10 +255,7 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
                   {/* Association info */}
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-gray-900">{association.name}</h3>
-                      {association.acronym && (
-                        <span className="text-sm text-gray-500">({association.acronym})</span>
-                      )}
+                      <h3 className="text-gray-900">{association.nom_association}</h3>
                       <span className={`px-2 py-1 rounded-full text-xs ${statusBadge.class}`}>
                         {statusBadge.label}
                       </span>
@@ -267,20 +263,20 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
 
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <span>{association.ufr}</span>
-                      {association.siret && (
+                      {association.num_siret && (
                         <>
                           <span>•</span>
-                          <span>{association.siret}</span>
+                          <span>{association.num_siret}</span>
                         </>
                       )}
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
-                      <span>{association.email}</span>
-                      {association.phone && (
+                      <span>{association.email_contact}</span>
+                      {association.tel_contact && (
                         <>
                           <span>•</span>
-                          <span>{association.phone}</span>
+                          <span>{association.tel_contact}</span>
                         </>
                       )}
                     </div>
