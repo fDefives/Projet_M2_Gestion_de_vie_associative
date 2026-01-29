@@ -18,13 +18,11 @@ class CustomUser(AbstractUser):
 
 class RoleType(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
-
-    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class AssociationType(models.Model):
