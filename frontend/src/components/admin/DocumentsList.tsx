@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, ChevronRight } from 'lucide-react';
+import { Search, Filter, ChevronRight, Download, Eye } from 'lucide-react';
 import * as API from '../../api';
 import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
 
@@ -9,18 +9,29 @@ export function DocumentsList(_props: DocumentsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterAssociationId, setFilterAssociationId] = useState('');
+  const [filterYear, setFilterYear] = useState('');
   const [documents, setDocuments] = useState<any[]>([]);
+  const [associations, setAssociations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await API.getDocuments();
-        const arr = Array.isArray(data) ? data : data?.results || [];
+        const [docsData, associationsData] = await Promise.all([
+          API.getDocuments(),
+          API.getAssociations(),
+        ]);
+        const arr = Array.isArray(docsData) ? docsData : docsData?.results || [];
+        const assocArr = Array.isArray(associationsData)
+          ? associationsData
+          : associationsData?.results || [];
         setDocuments(arr);
+        setAssociations(assocArr);
       } catch (err) {
         console.error('Erreur:', err);
         setDocuments([]);
+        setAssociations([]);
       } finally {
         setLoading(false);
       }
@@ -48,22 +59,76 @@ export function DocumentsList(_props: DocumentsListProps) {
     return Array.from(s).sort();
   }, [documents]);
 
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    documents.forEach((d) => {
+      if (d.date_depot) {
+        const y = new Date(d.date_depot).getFullYear();
+        if (!Number.isNaN(y)) years.add(String(y));
+      }
+    });
+    return Array.from(years).sort((a, b) => Number(b) - Number(a));
+  }, [documents]);
+
+  const getFileName = (value: string) => value.split('/').pop() || value;
+
+  const associationMap = useMemo(() => {
+    const map: Record<string | number, string> = {};
+    associations.forEach((a) => {
+      const id = a.id_association || a.id;
+      map[id] = a.nom_association || a.name || 'Association inconnue';
+    });
+    return map;
+  }, [associations]);
+
+  const getAssociationName = (doc: any): string => {
+    const assocId = doc.association?.id_association || doc.id_association || doc.association_id || doc.association;
+    return associationMap[assocId] || 'Association inconnue';
+  };
+
+  const handleDownloadDocument = async (doc: any) => {
+    try {
+      await API.downloadDocument(doc.id_document, doc.nom_fichier);
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      alert('Erreur lors du téléchargement du document');
+    }
+  };
+
+  const handlePreviewDocument = async (doc: any) => {
+    try {
+      const blob = await API.fetchDocumentBlob(doc.id_document);
+      const url = URL.createObjectURL(new Blob([blob], { type: blob.type || 'application/pdf' }));
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err) {
+      console.error('Error previewing document:', err);
+      alert('Erreur lors de l\'ouverture du document');
+    }
+  };
+
   const filtered = useMemo(() => {
     return documents.filter((d) => {
       const typeMatch = filterType ? (d.type_document_name || d.id_type_document?.libelle || '').toLowerCase() === filterType.toLowerCase() : true;
       const statusVal = (d.statut || d.status || '').toLowerCase();
       const statusMatch = filterStatus ? statusVal === filterStatus.toLowerCase() : true;
+
+      const assocId = d.association?.id_association || d.id_association || d.association_id || d.association;
+      const associationMatch = filterAssociationId ? String(assocId) === filterAssociationId : true;
+
+      const dateDepot = d.date_depot ? new Date(d.date_depot) : null;
+      const docYear = dateDepot ? String(dateDepot.getFullYear()) : '';
+      const yearMatch = filterYear ? docYear === filterYear : true;
       
-      // Chercher par nom d'association (utiliser la clé correcte de la base)
-      const assocName = d.association?.nom_association || d.nom_association || '';
-      const assocMatch = searchQuery ? 
-        (assocName || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-        (d.nom_fichier || '').toLowerCase().includes(searchQuery.toLowerCase()) : 
-        true;
+      // Recherche uniquement sur le nom du fichier
+      const fileName = getFileName(d.nom_fichier || '');
+      const assocMatch = searchQuery
+        ? fileName.toLowerCase().includes(searchQuery.toLowerCase())
+        : true;
       
-      return typeMatch && statusMatch && assocMatch;
+      return typeMatch && statusMatch && associationMatch && yearMatch && assocMatch;
     });
-  }, [documents, filterType, filterStatus, searchQuery]);
+  }, [documents, filterType, filterStatus, filterAssociationId, filterYear, searchQuery]);
 
   const resultsCount = filtered.length;
 
@@ -76,17 +141,7 @@ export function DocumentsList(_props: DocumentsListProps) {
           <h2 className="text-gray-900">Tous les documents</h2>
         </div>
 
-        <div className="flex gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher par nom d'association ou fichier..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div className="flex flex-wrap gap-4 mb-6">
 
           <select
             value={filterType}
@@ -109,41 +164,75 @@ export function DocumentsList(_props: DocumentsListProps) {
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
+
+          <select
+            value={filterAssociationId}
+            onChange={(e) => setFilterAssociationId(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Toutes les associations</option>
+            {associations.map((a) => (
+              <option key={a.id_association || a.id} value={a.id_association || a.id}>
+                {a.nom_association || a.name || 'Association'}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Toutes les années</option>
+            {availableYears.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
         </div>
 
         <div className="text-sm text-gray-600 mb-4">{resultsCount} document(s) trouvés</div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filtered.map((doc) => (
-          <div key={doc.id_document || `${doc.nom_fichier}-${Math.random()}`} className="w-full bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-gray-900">{doc.nom_fichier || 'Fichier'}</h3>
-                    <span className="text-sm text-gray-500">{doc.type_document_name || (doc.id_type_document?.libelle) || 'Type non précisé'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span>{doc.association?.nom_association || doc.nom_association || 'Association inconnue'}</span>
-                    <span>•</span>
-                    <span>{doc.date_depot ? new Date(doc.date_depot).toLocaleDateString('fr-FR') : '—'}</span>
-                  </div>
+          <div
+            key={doc.id_document || `${doc.nom_fichier}-${Math.random()}`}
+            className="flex items-center justify-between p-4 bg-white rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
+          >
+            <div className="flex items-center gap-4 flex-1">
+              <DocumentStatusBadge status={(doc.statut || doc.status || 'draft') as any} />
+              <div className="flex-1">
+                <div className="text-gray-900 font-medium">{getFileName(doc.nom_fichier || 'Fichier')}</div>
+                <div className="text-sm text-gray-600">
+                  {doc.type_document_name || doc.id_type_document?.libelle || 'Type non précisé'}
                 </div>
-
-                <div className="flex-shrink-0 text-right">
-                  <DocumentStatusBadge status={(doc.statut || doc.status || 'draft') as any} />
+                <div className="text-sm text-gray-500">
+                  {getAssociationName(doc)} • Déposé le {doc.date_depot ? new Date(doc.date_depot).toLocaleDateString('fr-FR') : '—'}
                 </div>
               </div>
+            </div>
 
-              <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePreviewDocument(doc)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Voir le document"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDownloadDocument(doc)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Télécharger le document"
+              >
+                <Download className="w-4 h-4" />
+              </button>
             </div>
           </div>
         ))}
 
         {resultsCount === 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+          <div className="bg-white rounded-lg p-12 text-center border border-gray-200">
             <p className="text-gray-600">Aucun document trouvé</p>
           </div>
         )}

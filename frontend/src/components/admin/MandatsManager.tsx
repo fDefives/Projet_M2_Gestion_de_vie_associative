@@ -31,7 +31,7 @@ interface MembreData {
   id_membre: number;
   prenom: string;
   nom: string;
-  email: string;
+  date_of_birth?: string;
   tel?: string;
   statut_membre: string;
 }
@@ -59,7 +59,7 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
   const [newMembreData, setNewMembreData] = useState({
     prenom: '',
     nom: '',
-    email: '',
+    date_of_birth: '',
   });
 
   // Close modal on ESC
@@ -121,7 +121,7 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
       date_debut: new Date().toISOString().split('T')[0],
       date_fin: '',
     });
-    setNewMembreData({ prenom: '', nom: '', email: '' });
+    setNewMembreData({ prenom: '', nom: '', date_of_birth: '' });
   };
 
   const handleSubmitMandat = async (e: React.FormEvent) => {
@@ -138,6 +138,15 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
           date_adhesion: new Date().toISOString().split('T')[0],
         });
         membreId = newMembre.id_membre;
+      }
+
+      // Si on est en mode édition, mettre à jour les infos du membre
+      if (editingMandat && newMembreData.prenom && newMembreData.nom) {
+        await API.updateMembre(membreId, {
+          prenom: newMembreData.prenom,
+          nom: newMembreData.nom,
+          date_of_birth: newMembreData.date_of_birth || undefined,
+        });
       }
 
       const payload = {
@@ -168,6 +177,15 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
     setEditingMandat(mandat);
     setShowAddForm(true);
     setShowNewMembreForm(false);
+    
+    // Charger les infos du membre pour permettre la modification
+    const membre = mandat.membre_detail || getMembreInfo(mandat.membre);
+    setNewMembreData({
+      prenom: membre?.prenom || '',
+      nom: membre?.nom || '',
+      date_of_birth: membre?.date_of_birth || '',
+    });
+    
     setFormData({
       membre: mandat.membre.toString(),
       role_type: mandat.role_type.toString(),
@@ -279,7 +297,38 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Membre *</label>
-                {!showNewMembreForm ? (
+                {editingMandat ? (
+                  <div className="border border-blue-200 rounded-lg p-4 bg-blue-50 space-y-3">
+                    <div className="text-sm font-medium text-blue-900 mb-2">Modifier les informations du membre</div>
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Prénom *"
+                        value={newMembreData.prenom}
+                        onChange={(e) => setNewMembreData({ ...newMembreData, prenom: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nom *"
+                        value={newMembreData.nom}
+                        onChange={(e) => setNewMembreData({ ...newMembreData, nom: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Date d'anniversaire</label>
+                        <input
+                          type="date"
+                          value={newMembreData.date_of_birth}
+                          onChange={(e) => setNewMembreData({ ...newMembreData, date_of_birth: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : !showNewMembreForm ? (
                   <div className="space-y-2">
                     <select
                       required
@@ -288,9 +337,9 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Sélectionner un membre existant</option>
-                      {membres.map((membre) => (
+                      {[...membres].sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom)).map((membre) => (
                         <option key={membre.id_membre} value={membre.id_membre}>
-                          {membre.prenom} {membre.nom} ({membre.email})
+                          {membre.prenom} {membre.nom} ({membre.date_of_birth ? new Date(membre.date_of_birth).toLocaleDateString('fr-FR') : 'Date non renseignée'})
                         </option>
                       ))}
                     </select>
@@ -314,7 +363,7 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
                         type="button"
                         onClick={() => {
                           setShowNewMembreForm(false);
-                          setNewMembreData({ prenom: '', nom: '', email: '' });
+                          setNewMembreData({ prenom: '', nom: '', date_of_birth: '' });
                         }}
                             className="text-sm text-gray-600 hover:text-gray-800"
                       >
@@ -338,13 +387,15 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
                         onChange={(e) => setNewMembreData({ ...newMembreData, nom: e.target.value })}
                         className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      <input
-                        type="email"
-                        placeholder="Email (optionnel)"
-                        value={newMembreData.email}
-                        onChange={(e) => setNewMembreData({ ...newMembreData, email: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Date d'anniversaire</label>
+                        <input
+                          type="date"
+                          value={newMembreData.date_of_birth}
+                          onChange={(e) => setNewMembreData({ ...newMembreData, date_of_birth: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -501,10 +552,10 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
                                       <div className="text-sm text-blue-600 font-medium">
                                         {mandat.role_type_name || getRoleTypeName(mandat.role_type)}
                                       </div>
-                                      {(membre?.email || mandat.membre_detail?.email) && (
+                                      {(membre?.date_of_birth || mandat.membre_detail?.date_of_birth) && (
                                         <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                                          <Mail className="w-3 h-3" />
-                                          {membre?.email || mandat.membre_detail?.email}
+                                          <Calendar className="w-3 h-3" />
+                                          {new Date(membre?.date_of_birth || mandat.membre_detail?.date_of_birth || '').toLocaleDateString('fr-FR')}
                                         </div>
                                       )}
                                       <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
@@ -641,10 +692,10 @@ function MandatCard({ mandat, onEdit, onDelete, getMembreInfo, showRole }: Manda
             )}
 
             <div className="flex flex-col gap-1 mt-2">
-              {membre?.email && (
+              {membre?.date_of_birth && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Mail className="w-4 h-4" />
-                  {membre.email}
+                  <Calendar className="w-4 h-4" />
+                  {new Date(membre.date_of_birth).toLocaleDateString('fr-FR')}
                 </div>
               )}
               {membre?.tel && (

@@ -158,6 +158,7 @@ class MembreSerializer(serializers.ModelSerializer):
             'id_membre',
             'prenom',
             'nom',
+            'date_of_birth',
             'date_adhesion',
             'statut_membre',
             'date_fin_adhesion',

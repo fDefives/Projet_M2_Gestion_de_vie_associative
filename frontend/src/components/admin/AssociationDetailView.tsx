@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Mail,
@@ -73,7 +73,7 @@ interface MandatData {
 }
 
 type DocumentStatus = 'submitted' | 'approved' | 'rejected' | 'expired' | 'draft' | 'missing';
-type TabType = 'overview' | 'documents' | 'leaders' | 'history';
+type TabType = 'overview' | 'documents' | 'leaders';
 
 interface AssociationDetailViewProps {
   association: any;
@@ -395,16 +395,6 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
             >
               Membres ({associationMembers.length})
             </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-4 py-3 border-b-2 transition-colors ${
-                activeTab === 'history'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Historique
-            </button>
           </div>
         </div>
 
@@ -451,9 +441,6 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
                 />
               )}
 
-              {activeTab === 'history' && (
-                <HistoryTab associationId={associationId} />
-              )}
             </>
           )}
         </div>
@@ -898,46 +885,6 @@ function LeadersTab({ associationId }: LeadersTabProps) {
   );
 }
 
-interface HistoryTabProps {
-  associationId: number;
-}
-
-function HistoryTab({ associationId }: HistoryTabProps) {
-  // For now, using placeholder history
-  const mockHistory = [
-    {
-      id: '1',
-      date: new Date().toISOString(),
-      action: 'Fiche créée',
-      details: 'Fiche association créée dans le système',
-      user: 'Admin',
-    },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900">Historique des actions</h3>
-
-      <div className="space-y-3">
-        {mockHistory.map((entry) => (
-          <div key={entry.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Clock className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <div className="text-gray-900 font-medium">{entry.action}</div>
-              <div className="text-sm text-gray-600">{entry.details}</div>
-              <div className="text-sm text-gray-500 mt-1">
-                Par {entry.user} • {new Date(entry.date).toLocaleDateString('fr-FR')} à{' '}
-                {new Date(entry.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // Modal pour l'upload de documents
 interface UploadDocumentModalProps {
