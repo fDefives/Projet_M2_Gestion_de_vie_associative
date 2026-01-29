@@ -18,6 +18,10 @@ User = get_user_model()
 
 class CustomUserSerializer(serializers.ModelSerializer):
     """Serializer pour les utilisateurs"""
+    
+    id_association = serializers.SerializerMethodField()
+    association_nom = serializers.SerializerMethodField()
+    role_type_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -29,9 +33,50 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'is_active',
+            'id_association',
+            'association_nom',
+            'role_type_name',
             'created_at',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'id_association', 'association_nom', 'role_type_name']
+    
+    def get_id_association(self, obj):
+        """Retourne l'ID de l'association si l'utilisateur en gère une"""
+        try:
+            from .models import Association
+            assoc = Association.objects.get(id_utilisateur=obj)
+            return assoc.id_association
+        except Association.DoesNotExist:
+            return None
+    
+    def get_association_nom(self, obj):
+        """Retourne le nom de l'association si l'utilisateur en gère une"""
+        try:
+            from .models import Association
+            assoc = Association.objects.get(id_utilisateur=obj)
+            return assoc.nom_association
+        except Association.DoesNotExist:
+            return None
+    
+    def get_role_type_name(self, obj):
+        """Retourne le rôle si l'utilisateur en a un via un mandat"""
+        try:
+            from .models import Membre, Mandat
+            # Chercher un membre associé à cet utilisateur
+            membre = Membre.objects.filter(
+                mandats__association__id_utilisateur=obj
+            ).first()
+            
+            if membre:
+                mandat = Mandat.objects.filter(
+                    membre=membre,
+                    association__id_utilisateur=obj
+                ).first()
+                if mandat and mandat.role_type:
+                    return mandat.role_type.name
+        except:
+            pass
+        return None
 
 
 class CustomUserCreateSerializer(serializers.ModelSerializer):
@@ -39,6 +84,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True, required=True)
     password2 = serializers.CharField(write_only=True, required=True)
+    id_association = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -49,6 +95,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
             'password2',
             'first_name',
             'last_name',
+            'id_association',
         ]
 
     def validate(self, data):
@@ -59,11 +106,27 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        from .models import Association
+        
         validated_data.pop('password2')
         password = validated_data.pop('password')
+        id_association = validated_data.pop('id_association', None)
+        
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        
+        # Associer l'utilisateur à l'association s'il y en a une
+        if id_association:
+            try:
+                association = Association.objects.get(id_association=id_association)
+                association.id_utilisateur = user
+                association.save()
+            except Association.DoesNotExist:
+                raise serializers.ValidationError(
+                    {"id_association": "L'association avec cet ID n'existe pas."}
+                )
+        
         return user
 
 
