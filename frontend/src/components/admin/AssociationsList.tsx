@@ -15,7 +15,8 @@ const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
 export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: AssociationsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
-  const [filterAssociationType, setFilterAssociationType] = useState<string>('all');  const [associationTypeFilter, setAssociationTypeFilter] = useState('');  const [sortField, setSortField] = useState<SortField>('name');
+  const [filterAssociationType, setFilterAssociationType] = useState<string>('all');
+  const [sortField, setSortField] = useState<SortField>('name');
   const [associations, setAssociations] = useState<any[]>([]);
   const [associationTypes, setAssociationTypes] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
@@ -197,33 +198,17 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
             <option value="pending">Non commencés</option>
           </select>
 
-          <input
-            type="text"
-            placeholder="Chercher un type..."
-            value={associationTypeFilter}
-            onChange={(e) => setAssociationTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          />
-
           <select
             value={filterAssociationType}
-            onChange={(e) => {
-              setFilterAssociationType(e.target.value);
-              const selected = associationTypes.find((t: any) => t.id.toString() === e.target.value);
-              if (selected) {
-                setAssociationTypeFilter(selected.name);
-              }
-            }}
+            onChange={(e) => setFilterAssociationType(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Tous les types</option>
-            {associationTypes
-              .filter((type: any) => type.name.toLowerCase().includes(associationTypeFilter.toLowerCase()))
-              .map((type: any) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
+            {associationTypes.map((type: any) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
           </select>
 
           <select

@@ -98,6 +98,8 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
   const [rejectionReason, setRejectionReason] = useState('');
   const [associationDocs, setAssociationDocs] = useState<DocumentData[]>([]);
   const [associationMembers, setAssociationMembers] = useState<MembreData[]>([]);
+  const [editingDocStatus, setEditingDocStatus] = useState<number | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [associationDetails, setAssociationDetails] = useState<any>(association);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +152,30 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
   const handleValidateDocument = (doc: DocumentData) => {
     setSelectedDocument(doc);
     setShowValidationModal(true);
+  };
+
+  const handleUpdateDocumentStatus = async (docId: number, newStatus: string) => {
+    try {
+      setUpdatingStatus(true);
+      await API.updateDocument(docId, { statut: newStatus });
+      
+      // Mettre à jour la liste locale
+      setAssociationDocs(prevDocs => 
+        prevDocs.map(doc => 
+          doc.id_document === docId ? { ...doc, statut: newStatus as any } : doc
+        )
+      );
+      
+      setEditingDocStatus(null);
+      if (onDataChanged) {
+        onDataChanged();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      alert('Impossible de mettre à jour le statut du document');
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const handleApproveDocument = async () => {
@@ -428,6 +454,10 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
                   onDownloadDocument={handleDownloadDocument}
                   onPreviewDocument={handlePreviewDocument}
                   onUploadClick={() => setShowUploadModal(true)}
+                  editingDocStatus={editingDocStatus}
+                  onEditStatus={setEditingDocStatus}
+                  onUpdateStatus={handleUpdateDocumentStatus}
+                  updatingStatus={updatingStatus}
                 />
               )}
 
@@ -642,9 +672,20 @@ interface DocumentsTabProps {
   onDownloadDocument: (doc: DocumentData) => void;
   onPreviewDocument: (doc: DocumentData) => void;
   onUploadClick: () => void;
+  editingDocStatus: number | null;
+  onEditStatus: (docId: number | null) => void;
+  onUpdateStatus: (docId: number, status: string) => void;
+  updatingStatus: boolean;
 }
 
-function DocumentsTab({ documents, onValidateDocument, onDownloadDocument, onPreviewDocument, onUploadClick }: DocumentsTabProps) {
+function DocumentsTab({ documents, onValidateDocument, onDownloadDocument, onPreviewDocument, onUploadClick, editingDocStatus, onEditStatus, onUpdateStatus, updatingStatus }: DocumentsTabProps) {
+  const statusOptions = [
+    { value: 'draft', label: 'Brouillon' },
+    { value: 'submitted', label: 'Soumis' },
+    { value: 'approved', label: 'Approuvé' },
+    { value: 'rejected', label: 'Rejeté' },
+    { value: 'expired', label: 'Expiré' },
+  ];
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
@@ -671,7 +712,41 @@ function DocumentsTab({ documents, onValidateDocument, onDownloadDocument, onPre
               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <div className="flex items-center gap-4 flex-1">
-                <DocumentStatusBadge status={doc.statut as DocumentStatus} />
+                {editingDocStatus === doc.id_document ? (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={doc.statut}
+                      onChange={(e) => onUpdateStatus(doc.id_document, e.target.value)}
+                      disabled={updatingStatus}
+                      className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      {statusOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => onEditStatus(null)}
+                      disabled={updatingStatus}
+                      className="p-1 text-gray-600 hover:bg-white rounded transition-colors"
+                      title="Annuler"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <DocumentStatusBadge status={doc.statut as DocumentStatus} />
+                    <button
+                      onClick={() => onEditStatus(doc.id_document)}
+                      className="p-1 text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                      title="Modifier le statut"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex-1">
                   <div className="text-gray-900 font-medium">{doc.nom_fichier.split('/').pop()}</div>
                   <div className="text-sm text-gray-600">
@@ -898,6 +973,7 @@ function UploadDocumentModal({ associationId, onClose, onSuccess, onDataChanged 
   const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedType, setSelectedType] = useState('');
+  const [dateEmission, setDateEmission] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
@@ -924,8 +1000,8 @@ function UploadDocumentModal({ associationId, onClose, onSuccess, onDataChanged 
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !selectedType) {
-      setError('Veuillez sélectionner un fichier et un type de document');
+    if (!selectedFile || !selectedType || !dateEmission) {
+      setError('Veuillez remplir tous les champs requis');
       return;
     }
 
@@ -937,6 +1013,7 @@ function UploadDocumentModal({ associationId, onClose, onSuccess, onDataChanged 
       formData.append('nom_fichier', selectedFile);
       formData.append('id_association', associationId.toString());
       formData.append('id_type_document', selectedType);
+      formData.append('date_emission', dateEmission);
 
       await API.uploadDocument(formData);
       onSuccess();
@@ -963,7 +1040,7 @@ function UploadDocumentModal({ associationId, onClose, onSuccess, onDataChanged 
 
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Type de document</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type de document <span className="text-red-500">*</span></label>
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
@@ -979,7 +1056,17 @@ function UploadDocumentModal({ associationId, onClose, onSuccess, onDataChanged 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Fichier</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date d'émission <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              value={dateEmission}
+              onChange={(e) => setDateEmission(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Fichier <span className="text-red-500">*</span></label>
             <input
               type="file"
               onChange={handleFileChange}
@@ -1005,7 +1092,7 @@ function UploadDocumentModal({ associationId, onClose, onSuccess, onDataChanged 
           </button>
           <button
             onClick={handleUpload}
-            disabled={!selectedFile || !selectedType || uploading}
+            disabled={!selectedFile || !selectedType || !dateEmission || uploading}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             {uploading ? 'Envoi en cours...' : 'Importer'}

@@ -157,11 +157,15 @@ interface DocumentTypesSectionProps {
 
 function DocumentTypesSection({ types, onRefresh, onAdd }: DocumentTypesSectionProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState({ libelle: '', obligatoire: false });
+  const [editData, setEditData] = useState({ libelle: '', obligatoire: false, duree_validite_mois: null as number | null });
 
   const handleEdit = (type: any) => {
     setEditingId(type.id_type_document);
-    setEditData({ libelle: type.libelle, obligatoire: type.obligatoire || false });
+    setEditData({ 
+      libelle: type.libelle, 
+      obligatoire: type.obligatoire || false,
+      duree_validite_mois: type.duree_validite_mois || null
+    });
   };
 
   const handleSave = async (id: number) => {
@@ -221,6 +225,17 @@ function DocumentTypesSection({ types, onRefresh, onAdd }: DocumentTypesSectionP
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Nom du type"
                   />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={editData.duree_validite_mois || ''}
+                      onChange={(e) => setEditData({ ...editData, duree_validite_mois: e.target.value ? parseInt(e.target.value) : null })}
+                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="12"
+                      min="1"
+                    />
+                    <span className="text-sm text-gray-600">mois</span>
+                  </div>
                   <label className="flex items-center gap-2 text-sm text-gray-700">
                     <input
                       type="checkbox"
@@ -258,6 +273,9 @@ function DocumentTypesSection({ types, onRefresh, onAdd }: DocumentTypesSectionP
                           <span className="text-red-600 font-medium">Obligatoire</span>
                         ) : (
                           <span className="text-gray-500">Optionnel</span>
+                        )}
+                        {type.duree_validite_mois && (
+                          <span className="ml-2 text-blue-600">• Validité: {type.duree_validite_mois} mois</span>
                         )}
                       </div>
                     </div>
@@ -429,6 +447,7 @@ function AddTypeModal({ type, onClose, onSuccess }: AddTypeModalProps) {
     libelle: '',
     description: '',
     obligatoire: false,
+    duree_validite_mois: null as number | null,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -455,6 +474,7 @@ function AddTypeModal({ type, onClose, onSuccess }: AddTypeModalProps) {
           await API.createDocumentType({
             libelle: formData.libelle,
             obligatoire: formData.obligatoire,
+            duree_validite_mois: formData.duree_validite_mois,
           });
           break;
         case 'roles':
@@ -512,6 +532,19 @@ function AddTypeModal({ type, onClose, onSuccess }: AddTypeModalProps) {
                     onChange={(e) => setFormData({ ...formData, libelle: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Ex: Statuts, Assurance, Budget..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Durée de validité (en mois)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.duree_validite_mois || ''}
+                    onChange={(e) => setFormData({ ...formData, duree_validite_mois: e.target.value ? parseInt(e.target.value) : null })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ex: 12 pour 1 an, 24 pour 2 ans..."
+                    min="1"
                   />
                 </div>
                 <div className="flex items-center gap-2">

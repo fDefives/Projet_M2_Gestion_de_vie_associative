@@ -706,6 +706,19 @@ export const updateDocumentType = async (id, typeData) => {
 };
 
 /**
+ * Mettre à jour un document
+ */
+export const updateDocument = async (id, documentData) => {
+  try {
+    const response = await api.patch(`/documents/${id}/`, documentData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du document:', error);
+    throw error;
+  }
+};
+
+/**
  * Supprimer un type d'association
  */
 export const deleteAssociationType = async (id) => {
