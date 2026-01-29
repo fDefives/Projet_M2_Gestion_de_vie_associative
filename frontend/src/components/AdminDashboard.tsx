@@ -31,6 +31,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
     association_type: '',
   });
   const [associationTypes, setAssociationTypes] = useState<any[]>([]);
+  const [associationTypeFilter, setAssociationTypeFilter] = useState('');
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
@@ -98,6 +99,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
       tel_contact: '',
     });
     setNewUser({ email: '', password: '' });
+    setAssociationTypeFilter('');
     setShowCreateModal(false);
   };
 
@@ -164,6 +166,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
         association_type: '',
       });
       setNewUser({ email: '', password: '' });
+      setAssociationTypeFilter('');
       setShowCreateModal(false);
       // Refresh associations list
       setCurrentView('associations');
@@ -280,13 +283,12 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
 
             {/* Modal de création */}
             {showCreateModal && (
-              <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}  >
-                <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
+              <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-lg w-full my-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Créer une association</h2>
                   
-                  <div className="space-y-6">
-                    <div>
-                      <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Nom</label>
                           <input
@@ -355,22 +357,38 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
 
                         <div className="col-span-2">
                           <label className="block text-sm font-medium text-gray-700 mb-2">Type d'association</label>
+                          <input
+                            type="text"
+                            placeholder="Chercher un type..."
+                            value={associationTypeFilter}
+                            onChange={(e) => setAssociationTypeFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+                          />
                           <select
                             value={newAsso.association_type}
-                            onChange={(e) => setNewAsso({ ...newAsso, association_type: e.target.value })}
+                            onChange={(e) => {
+                              setNewAsso({ ...newAsso, association_type: e.target.value });
+                              const selected = associationTypes.find((t: any) => t.id.toString() === e.target.value);
+                              if (selected) {
+                                setAssociationTypeFilter(selected.name);
+                              }
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            size={5}
                             required
                           >
                             <option value="">-- Sélectionner un type --</option>
-                            {associationTypes.map((type: any) => (
-                              <option key={type.id} value={type.id}>
-                                {type.name}
-                              </option>
-                            ))}
+                            {associationTypes
+                              .filter((type: any) => type.name.toLowerCase().includes(associationTypeFilter.toLowerCase()))
+                              .map((type: any) => (
+                                <option key={type.id} value={type.id}>
+                                  {type.name}
+                                </option>
+                              ))}
                           </select>
                         </div>
 
-                        <div className="col-span-2">
+                        <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Instagram</label>
                           <input
                             type="text"
@@ -381,10 +399,9 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                           />
                         </div>
                       </div>
-                    </div>
 
-                    <div className="border-t border-gray-200 pt-6">
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="border-t border-gray-200 pt-3">
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2" style={{ marginTop: '5%' }}>Email utilisateur</label>
                           <input
@@ -409,8 +426,8 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                     </div>
                   </div>
 
-                    <div className="h-6" />
-                    <div className="flex gap-4 mt-6">
+                  <div className="h-6" />
+                  <div className="flex gap-4 mt-6">
                     <button
                       onClick={handleCancelCreate}
                       className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"

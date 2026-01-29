@@ -47,6 +47,8 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
   const [viewMode, setViewMode] = useState<'bureau' | 'all'>('bureau');
   const [showNewMembreForm, setShowNewMembreForm] = useState(false);
   const [expandedPeriods, setExpandedPeriods] = useState<Record<string, boolean>>({});
+  const [membreFilter, setMembreFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
 
   const [formData, setFormData] = useState({
     membre: '',
@@ -114,6 +116,8 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
     setEditingMandat(null);
     setShowAddForm(false);
     setShowNewMembreForm(false);
+    setMembreFilter('');
+    setRoleFilter('');
     setFormData({
       membre: '',
       role_type: '',
@@ -274,7 +278,7 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
 
       {showAddForm && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50"
+          className="fixed inset-0 flex items-center justify-center z-50 min-h-screen"
           style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}
           onClick={resetForm}
         >
@@ -330,18 +334,35 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
                   </div>
                 ) : !showNewMembreForm ? (
                   <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Chercher un membre..."
+                      value={membreFilter}
+                      onChange={(e) => setMembreFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
                     <select
                       required
                       value={formData.membre}
-                      onChange={(e) => setFormData({ ...formData, membre: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, membre: e.target.value });
+                        const selectedMembre = membres.find((m) => m.id_membre === parseInt(e.target.value, 10));
+                        if (selectedMembre) {
+                          setMembreFilter(`${selectedMembre.prenom} ${selectedMembre.nom}`);
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      size={5}
                     >
                       <option value="">Sélectionner un membre existant</option>
-                      {[...membres].sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom)).map((membre) => (
-                        <option key={membre.id_membre} value={membre.id_membre}>
-                          {membre.prenom} {membre.nom} ({membre.date_of_birth ? new Date(membre.date_of_birth).toLocaleDateString('fr-FR') : 'Date non renseignée'})
-                        </option>
-                      ))}
+                      {[...membres]
+                        .filter((m) => `${m.prenom} ${m.nom}`.toLowerCase().includes(membreFilter.toLowerCase()))
+                        .sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom))
+                        .map((membre) => (
+                          <option key={membre.id_membre} value={membre.id_membre}>
+                            {membre.prenom} {membre.nom}
+                          </option>
+                        ))}
                     </select>
                     <button
                       type="button"
@@ -403,18 +424,34 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Rôle *</label>
+                <input
+                  type="text"
+                  placeholder="Chercher un rôle..."
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+                />
                 <select
                   required
                   value={formData.role_type}
-                  onChange={(e) => setFormData({ ...formData, role_type: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, role_type: e.target.value });
+                    const selectedRole = roleTypes.find((r) => r.id === parseInt(e.target.value, 10));
+                    if (selectedRole) {
+                      setRoleFilter(selectedRole.name);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  size={5}
                 >
                   <option value="">Sélectionner un rôle</option>
-                  {roleTypes.map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
+                  {roleTypes
+                    .filter((r) => r.name.toLowerCase().includes(roleFilter.toLowerCase()))
+                    .map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 

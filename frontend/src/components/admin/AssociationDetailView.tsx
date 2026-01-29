@@ -1038,6 +1038,7 @@ function EditAssociationModal({ association, onClose, onSuccess }: EditAssociati
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [associationTypes, setAssociationTypes] = useState<any[]>([]);
+  const [associationTypeFilter, setAssociationTypeFilter] = useState('');
 
   useEffect(() => {
     const loadAssociationTypes = async () => {
@@ -1077,8 +1078,8 @@ function EditAssociationModal({ association, onClose, onSuccess }: EditAssociati
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
+      <div className="bg-white rounded-lg shadow-lg p-6 max-w-lg w-full my-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Modifier l'association</h2>
 
         {error && (
@@ -1088,8 +1089,8 @@ function EditAssociationModal({ association, onClose, onSuccess }: EditAssociati
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nom de l'association <span className="text-red-500">*</span>
@@ -1133,18 +1134,34 @@ function EditAssociationModal({ association, onClose, onSuccess }: EditAssociati
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Type d'association</label>
+                <input
+                  type="text"
+                  placeholder="Chercher un type..."
+                  value={associationTypeFilter}
+                  onChange={(e) => setAssociationTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+                />
                 <select
                   name="association_type"
                   value={formData.association_type}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    const selected = associationTypes.find((t: any) => t.id.toString() === e.target.value);
+                    if (selected) {
+                      setAssociationTypeFilter(selected.name);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  size={5}
                 >
                   <option value="">-- Sélectionner un type --</option>
-                  {associationTypes.map((type: any) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
+                  {associationTypes
+                    .filter((type: any) => type.name.toLowerCase().includes(associationTypeFilter.toLowerCase()))
+                    .map((type: any) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -1197,7 +1214,7 @@ function EditAssociationModal({ association, onClose, onSuccess }: EditAssociati
                 />
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                 <textarea
                   name="desc_association"
