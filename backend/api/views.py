@@ -35,6 +35,7 @@ class UserRegistrationView(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = []
+    pagination_class = None
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -101,6 +102,7 @@ class AssociationViewSet(viewsets.ModelViewSet):
     queryset = Association.objects.all()
     serializer_class = AssociationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         """Filtre les associations selon le rôle"""
@@ -192,6 +194,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated, IsDocumentOwnerOrAdmin]
+    pagination_class = None
 
     def get_queryset(self):
         """
@@ -343,6 +346,7 @@ class TypeDocumentViewSet(viewsets.ModelViewSet):
     queryset = TypeDocument.objects.all()
     serializer_class = TypeDocumentSerializer
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = None
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
@@ -350,6 +354,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         """Filtre les notifications selon le rôle"""
