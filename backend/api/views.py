@@ -172,21 +172,18 @@ class AssociationViewSet(viewsets.ModelViewSet):
 
 
 class MembreViewSet(viewsets.ModelViewSet):
-    """ViewSet pour les membres des associations"""
+    """ViewSet pour les membres - indépendants des associations"""
     queryset = Membre.objects.all()
     serializer_class = MembreSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    pagination_class = None
+    
     def get_queryset(self):
-        """Filtre les membres selon le rôle"""
-        user = self.request.user
-        if user.is_staff:
-            return Membre.objects.all()
-        # Les utilisateurs ne voient que les membres de leur association
-        return Membre.objects.filter(id_association__id_utilisateur=user)
+        """Retourne tous les membres - ils sont indépendants des associations"""
+        return Membre.objects.all()
 
     def perform_create(self, serializer):
-        """Crée un membre"""
+        """Crée un membre avec seulement prenom et nom"""
         serializer.save()
 
 
@@ -383,6 +380,7 @@ class AssociationTypeViewSet(viewsets.ModelViewSet):
     queryset = AssociationType.objects.all()
     serializer_class = AssociationTypeSerializer
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = None
 
 
 class RoleTypeViewSet(viewsets.ModelViewSet):
@@ -390,6 +388,7 @@ class RoleTypeViewSet(viewsets.ModelViewSet):
     queryset = RoleType.objects.all()
     serializer_class = RoleTypeSerializer
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = None
 
 
 class MandatViewSet(viewsets.ModelViewSet):
@@ -397,7 +396,8 @@ class MandatViewSet(viewsets.ModelViewSet):
     queryset = Mandat.objects.all()
     serializer_class = MandatSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    pagination_class = None
+    
     def get_queryset(self):
         """Filtre les mandats selon le rôle et l'association passée en query param"""
         user = self.request.user

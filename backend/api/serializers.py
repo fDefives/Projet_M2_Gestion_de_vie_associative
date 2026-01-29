@@ -147,10 +147,7 @@ class AssociationSerializer(serializers.ModelSerializer):
 
 
 class MembreSerializer(serializers.ModelSerializer):
-    associations = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Association.objects.all(),
-    )
+    """Serializer pour les membres - indépendants des associations"""
 
     class Meta:
         model = Membre
@@ -162,10 +159,10 @@ class MembreSerializer(serializers.ModelSerializer):
             'date_adhesion',
             'statut_membre',
             'date_fin_adhesion',
-            'associations',
             'created_at',
             'updated_at',
         ]
+        read_only_fields = ['id_membre', 'date_adhesion', 'created_at', 'updated_at']
 
 
 class TypeDocumentSerializer(serializers.ModelSerializer):
@@ -239,6 +236,10 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class RoleTypeSerializer(serializers.ModelSerializer):
     """Serializer pour les types de rôles"""
+
+    id = serializers.IntegerField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = RoleType
