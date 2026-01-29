@@ -138,8 +138,7 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
       if (showNewMembreForm) {
         const newMembre = await API.createMembre({
           ...newMembreData,
-          statut_membre: 'actif',
-          date_adhesion: new Date().toISOString().split('T')[0],
+          statut_membre: 'active',
         });
         membreId = newMembre.id_membre;
       }
