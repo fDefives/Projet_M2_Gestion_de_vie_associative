@@ -29,4 +29,5 @@ def test_user_cannot_access_other_association_documents():
     client.force_authenticate(user=user1)
     resp = client.get("/api/documents/")
     assert resp.status_code == 200
-    assert len(resp.data["results"]) == 0
+    assert len(resp.data) == 0
+
