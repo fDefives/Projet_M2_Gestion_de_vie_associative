@@ -1,5 +1,6 @@
 [flake8]
 max-line-length = 88
+extend-ignore = W503,E203
 
 exclude =
     .git,
@@ -13,4 +14,3 @@ exclude =
     selenium,
     data_migration.py,
     verify_implementation.py
-
