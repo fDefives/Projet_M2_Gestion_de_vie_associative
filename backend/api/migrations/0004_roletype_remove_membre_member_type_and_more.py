@@ -5,39 +5,52 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0003_associationtype_remove_membre_id_association_and_more'),
+        ("api", "0003_associationtype_remove_membre_id_association_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RoleType',
+            name="RoleType",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.RemoveField(
-            model_name='membre',
-            name='member_type',
+            model_name="membre",
+            name="member_type",
         ),
         migrations.RemoveField(
-            model_name='customuser',
-            name='role',
+            model_name="customuser",
+            name="role",
         ),
         migrations.RemoveField(
-            model_name='mandat',
-            name='role',
+            model_name="mandat",
+            name="role",
         ),
         migrations.AddField(
-            model_name='mandat',
-            name='role_type',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='mandats', to='api.roletype'),
+            model_name="mandat",
+            name="role_type",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="mandats",
+                to="api.roletype",
+            ),
         ),
         migrations.DeleteModel(
-            name='MemberType',
+            name="MemberType",
         ),
     ]
