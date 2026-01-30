@@ -102,7 +102,8 @@ def mandat(db, membre, association, role_type):
 def test_register_user(api_client):
     response = api_client.post(
         "/api/users/register/",
-        {"email": "new@test.com", "username": "new", "password": "StrongPass123"},
+        {"email": "new@test.com", "username": "new", "password": "StrongPass123",
+         "password2": "StrongPass123"},
     )
     assert response.status_code == 201
 
