@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
+
 from api.models import Association, TypeDocument, Document
 
 User = get_user_model()
@@ -10,8 +11,12 @@ User = get_user_model()
 def test_only_admin_can_approve_document():
     client = APIClient()
 
-    admin = User.objects.create_user(username="admin", email="a@test.com", password="pass", is_staff=True)
-    user = User.objects.create_user(username="user", email="u@test.com", password="pass")
+    admin = User.objects.create_user(
+        username="admin", email="a@test.com", password="pass", is_staff=True
+    )
+    user = User.objects.create_user(
+        username="user", email="u@test.com", password="pass"
+    )
 
     assoc = Association.objects.create(nom_association="Asso", id_utilisateur=user)
     dtype = TypeDocument.objects.create(libelle="Statuts")
@@ -20,7 +25,7 @@ def test_only_admin_can_approve_document():
         nom_fichier="doc.pdf",
         id_association=assoc,
         id_type_document=dtype,
-        uploaded_by=user
+        uploaded_by=user,
     )
 
     # user interdit

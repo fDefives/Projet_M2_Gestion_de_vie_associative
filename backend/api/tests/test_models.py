@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+
 from api.models import Association, AssociationType, Document, TypeDocument
 
 User = get_user_model()
@@ -16,8 +17,7 @@ def test_custom_user_email_unique():
 def test_association_string_representation():
     atype = AssociationType.objects.create(name="Culture")
     assoc = Association.objects.create(
-        nom_association="Test Asso",
-        association_type=atype
+        nom_association="Test Asso", association_type=atype
     )
     assert str(assoc) == "Test Asso"
 
@@ -33,7 +33,7 @@ def test_document_default_status():
         nom_fichier="test.pdf",
         id_association=assoc,
         id_type_document=dtype,
-        uploaded_by=user
+        uploaded_by=user,
     )
 
     assert doc.statut == "submitted"

@@ -14,6 +14,3 @@ exclude =
     data_migration.py,
     verify_implementation.py
 
-ignore =
-    E501,
-    W293
