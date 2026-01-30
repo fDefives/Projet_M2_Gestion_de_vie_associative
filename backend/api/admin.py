@@ -92,9 +92,6 @@ class AssociationTypeAdmin(admin.ModelAdmin):
 # =========================
 # MEMBRES
 # =========================
-# =========================
-# MEMBRES
-# =========================
 @admin.register(Membre)
 class MembreAdmin(admin.ModelAdmin):
     list_display = (

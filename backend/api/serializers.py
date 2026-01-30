@@ -57,7 +57,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             return assoc.nom_association
         except Association.DoesNotExist:
             return None
-    
+
     def get_role_type_name(self, obj):
         """Retourne le rôle si l'utilisateur en a un via un mandat"""
         try:
@@ -66,7 +66,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             membre = Membre.objects.filter(
                 mandats__association__id_utilisateur=obj
             ).first()
-            
+
             if membre:
                 mandat = Mandat.objects.filter(
                     membre=membre,
@@ -74,7 +74,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
                 ).first()
                 if mandat and mandat.role_type:
                     return mandat.role_type.name
-        except:
+        except Exception:
             pass
         return None
 
