@@ -358,13 +358,19 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if user.is_staff:
             # L'admin voit tous les documents
             return Document.objects.all().select_related(
-                "id_association", "id_type_document", "uploaded_by"
+                "id_association",
+                "id_type_document",
+                "uploaded_by",
             )
 
         # L'utilisateur voit seulement les documents de son association
         return Document.objects.filter(
             id_association__id_utilisateur=user
-        ).select_related("id_association", "id_type_document", "uploaded_by")
+        ).select_related(
+            "id_association",
+            "id_type_document",
+            "uploaded_by",
+        )
 
     def perform_create(self, serializer):
         """Ajoute le document avec l'utilisateur connecté"""
@@ -546,6 +552,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         Notification.objects.filter(id_notification__in=notification_ids).update(
             is_read=True
         )
+
         return Response({"message": "Notifications marquées comme lues"})
 
     @action(
@@ -597,7 +604,9 @@ class MandatViewSet(viewsets.ModelViewSet):
         else:
             # Les utilisateurs ne voient que les mandats de leur association
             qs = Mandat.objects.filter(association__id_utilisateur=user).select_related(
-                "membre", "association", "role_type"
+                "membre",
+                "association",
+                "role_type",
             )
 
         if association_id:
