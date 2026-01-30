@@ -1,9 +1,14 @@
 from rest_framework import viewsets, status, permissions, serializers
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.conf import settings
 import os
 
 from .models import Association, AssociationType, Membre, TypeDocument, Document, Notification, Mandat, RoleType
@@ -13,6 +18,8 @@ from .serializers import (
     CustomUserSerializer,
     CustomUserCreateSerializer,
     ChangePasswordSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
     AssociationTypeSerializer,
     AssociationSerializer,
     MembreSerializer,
@@ -42,6 +49,10 @@ class UserRegistrationView(viewsets.ModelViewSet):
             return CustomUserCreateSerializer
         elif self.action == 'change_password':
             return ChangePasswordSerializer
+        elif self.action == 'password_reset_request':
+            return PasswordResetRequestSerializer
+        elif self.action == 'password_reset_confirm':
+            return PasswordResetConfirmSerializer
         return CustomUserSerializer
 
     @action(detail=False, methods=['post'], permission_classes=[])
@@ -86,6 +97,114 @@ class UserRegistrationView(viewsets.ModelViewSet):
                 status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], permission_classes=[])
+    def password_reset_request(self, request):
+        """
+        Demande de réinitialisation de mot de passe.
+        Envoie un email avec un lien de reset si l'utilisateur existe.
+        
+        POST /api/users/password_reset_request/
+        Body: {"email": "user@example.com"}
+        """
+        email = request.data.get("email")
+
+        if not email:
+            return Response(
+                {"error": "L'email est requis."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = User.objects.filter(email=email).first()
+        if user:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
+
+            send_mail(
+                "Réinitialisation de votre mot de passe",
+                f"Bonjour {user.username},\n\n"
+                f"Vous avez demandé la réinitialisation de votre mot de passe.\n\n"
+                f"Cliquez sur le lien suivant pour réinitialiser votre mot de passe :\n{reset_url}\n\n"
+                f"Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.\n\n"
+                f"Ce lien expirera dans 24 heures.",
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+
+        # Réponse neutre pour la sécurité (évite de confirmer l'existence d'un compte)
+        return Response(
+            {"message": "Si un compte existe avec cet email, un message de réinitialisation a été envoyé."},
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=False, methods=['post'], permission_classes=[])
+    def password_reset_confirm(self, request):
+        """
+        Confirmation du reset de mot de passe avec le token reçu par email.
+        
+        POST /api/users/password_reset_confirm/
+        Body: {
+            "uidb64": "encoded_user_id",
+            "token": "reset_token",
+            "new_password": "nouveau_mot_de_passe",
+            "new_password2": "nouveau_mot_de_passe"
+        }
+        """
+        uidb64 = request.data.get("uidb64")
+        token = request.data.get("token")
+        
+        if not uidb64 or not token:
+            return Response(
+                {"error": "uidb64 et token sont requis."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response(
+                {"error": "Lien de réinitialisation invalide."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not default_token_generator.check_token(user, token):
+            return Response(
+                {"error": "Le lien de réinitialisation a expiré ou est invalide."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        new_password = request.data.get("new_password")
+        new_password2 = request.data.get("new_password2")
+
+        if not new_password or not new_password2:
+            return Response(
+                {"error": "Les deux mots de passe sont requis."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if new_password != new_password2:
+            return Response(
+                {"error": "Les mots de passe ne correspondent pas."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {"error": "Le mot de passe doit contenir au moins 8 caractères."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response(
+            {"message": "Mot de passe réinitialisé avec succès."},
+            status=status.HTTP_200_OK
+        )
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:

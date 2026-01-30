@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema_field
+from typing import Optional
 
 from .models import (
     Association,
@@ -40,7 +42,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'id_association', 'association_nom', 'role_type_name']
     
-    def get_id_association(self, obj):
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_id_association(self, obj) -> Optional[int]:
         """Retourne l'ID de l'association si l'utilisateur en gère une"""
         try:
             from .models import Association
@@ -49,7 +52,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         except Association.DoesNotExist:
             return None
     
-    def get_association_nom(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_association_nom(self, obj) -> Optional[str]:
         """Retourne le nom de l'association si l'utilisateur en gère une"""
         try:
             from .models import Association
@@ -58,7 +62,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         except Association.DoesNotExist:
             return None
     
-    def get_role_type_name(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_role_type_name(self, obj) -> Optional[str]:
         """Retourne le rôle si l'utilisateur en a un via un mandat"""
         try:
             from .models import Membre, Mandat
@@ -165,6 +170,29 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['new_password'])
         user.save()
         return user
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Serializer pour la demande de réinitialisation de mot de passe"""
+    
+    email = serializers.EmailField(required=True, help_text="L'email du compte à réinitialiser")
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer pour la confirmation de réinitialisation de mot de passe"""
+    
+    uidb64 = serializers.CharField(required=True, help_text="L'identifiant encodé de l'utilisateur")
+    token = serializers.CharField(required=True, help_text="Le token de réinitialisation")
+    new_password = serializers.CharField(write_only=True, required=True, min_length=8, help_text="Le nouveau mot de passe (min 8 caractères)")
+    new_password2 = serializers.CharField(write_only=True, required=True, help_text="Confirmation du nouveau mot de passe")
+
+    def validate(self, data):
+        """Vérifie que les nouveaux mots de passe correspondent"""
+        if data['new_password'] != data['new_password2']:
+            raise serializers.ValidationError(
+                {"new_password": "Les mots de passe ne correspondent pas."}
+            )
+        return data
 
 
 class AssociationTypeSerializer(serializers.ModelSerializer):
