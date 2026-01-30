@@ -1,6 +1,10 @@
 [flake8]
 max-line-length = 88
 
+extend-ignore =
+    E203,
+    W503
+
 exclude =
     .git,
     __pycache__,
@@ -13,8 +17,3 @@ exclude =
     selenium,
     data_migration.py,
     verify_implementation.py
-
-ignore =
-    E501,
-    W293,
-    W503

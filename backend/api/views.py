@@ -153,7 +153,7 @@ class UserRegistrationView(viewsets.ModelViewSet):
         return Response(
             {
                 "message": "Si un compte existe avec cet email, "
-                           "un message de réinitialisation a été envoyé."
+                "un message de réinitialisation a été envoyé."
             },
             status=status.HTTP_200_OK,
         )
@@ -252,7 +252,7 @@ class AssociationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Création association : crée systématiquement un utilisateur dédié
-         (email + mot de passe obligatoires)."""
+        (email + mot de passe obligatoires)."""
         email = self.request.data.get("user_email") or self.request.data.get("email")
         password = self.request.data.get("user_password") or self.request.data.get(
             "password"
