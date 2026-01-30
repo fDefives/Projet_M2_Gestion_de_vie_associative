@@ -257,6 +257,41 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
           );
         })()}
 
+        {(() => {
+          // Vérifier les documents qui expirent dans les 2 prochains mois
+          const twoMonthsFromNow = new Date();
+          twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
+          
+          const expiringDocs = documents.filter((d: any) => {
+            if (!d.date_expiration || d.statut !== 'approved') return false;
+            const expirationDate = new Date(d.date_expiration);
+            const now = new Date();
+            return expirationDate > now && expirationDate <= twoMonthsFromNow;
+          });
+          
+          return expiringDocs.length > 0 && (
+            <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Clock className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="text-yellow-900 mb-1">Documents à renouveler prochainement</div>
+                  <p className="text-sm text-yellow-800 mb-2">
+                    {expiringDocs.length} document{expiringDocs.length > 1 ? 's' : ''} expire{expiringDocs.length > 1 ? 'nt' : ''} dans les 2 prochains mois :
+                  </p>
+                  <ul className="text-sm text-yellow-800 space-y-1">
+                    {expiringDocs.map((doc: any) => (
+                      <li key={doc.id_document} className="flex items-center gap-2">
+                        <span className="font-medium">{doc.type_document_name}</span>
+                        <span>- expire le {new Date(doc.date_expiration).toLocaleDateString('fr-FR')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm mb-6">
           <div className="border-b border-gray-200">
@@ -834,7 +869,7 @@ function AssociationDocumentsTab({ documents, onUpload, onDownload, onPreview }:
                   )}
                   {doc.statut === 'expired' && (
                     <div className="text-sm text-red-600 mt-1">
-                      ⚠️ Document expiré - Merci de déposer une nouvelle version
+                      ✗ Document expiré
                     </div>
                   )}
                 </div>

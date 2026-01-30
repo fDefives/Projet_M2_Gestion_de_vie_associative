@@ -379,7 +379,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        """Ajoute le document avec l'utilisateur connecté"""
+        """Ajoute le document avec l'utilisateur connecté et expire les anciens documents du même type"""
+        # Récupérer les données avant la sauvegarde
+        id_association = serializer.validated_data.get('id_association')
+        id_type_document = serializer.validated_data.get('id_type_document')
+        
+        # Marquer les anciens documents du même type comme expirés
+        if id_association and id_type_document:
+            Document.objects.filter(
+                id_association=id_association,
+                id_type_document=id_type_document,
+            ).exclude(
+                statut='expired'  # Ne pas modifier ceux déjà expirés
+            ).update(
+                statut='expired'
+            )
+        
+        # Sauvegarder le nouveau document
         serializer.save(uploaded_by=self.request.user)
 
     @action(
