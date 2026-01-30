@@ -194,12 +194,18 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {(() => {
-          const approvedDocsByType = REQUIRED_DOCUMENT_TYPES.map(type => {
-            return documents.find(
-              d => d.type_document_name?.toLowerCase().includes(type.toLowerCase())
-            )?.statut === 'approved';
-          }).filter(Boolean).length;
-          const completionRate = Math.round((approvedDocsByType / REQUIRED_DOCUMENT_TYPES.length) * 100);
+          // Trouver les types de documents obligatoires
+          const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
+          const obligatoryTypeNames = requiredDocTypes.map((dt: any) => dt.libelle.toLowerCase());
+          
+          // Compter les documents obligatoires approuvés
+          const approvedObligatoryDocs = documents.filter((d: any) => {
+            const docTypeName = d.type_document_name?.toLowerCase() || '';
+            return obligatoryTypeNames.some(name => docTypeName.includes(name)) && d.statut === 'approved';
+          }).length;
+          
+          const totalObligatory = requiredDocTypes.length;
+          const completionRate = totalObligatory > 0 ? Math.round((approvedObligatoryDocs / totalObligatory) * 100) : 100;
           
           return completionRate < 100 && (
             <div className="mb-6 bg-orange-50 border border-orange-200 rounded-xl p-4">
@@ -208,7 +214,7 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
                 <div className="flex-1">
                   <div className="text-orange-900 mb-1">Votre dossier est incomplet</div>
                   <p className="text-sm text-orange-800">
-                    Il manque {REQUIRED_DOCUMENT_TYPES.length - approvedDocsByType} document(s) pour valider votre dossier. Cela pourrait impacter
+                    Il manque {totalObligatory - approvedObligatoryDocs} document(s) obligatoire(s) pour valider votre dossier. Cela pourrait impacter
                     l'attribution de subventions.
                   </p>
                 </div>
@@ -222,12 +228,18 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
         })()}
 
         {(() => {
-          const approvedDocsByType = REQUIRED_DOCUMENT_TYPES.map(type => {
-            return documents.find(
-              d => d.type_document_name?.toLowerCase().includes(type.toLowerCase())
-            )?.statut === 'approved';
-          }).filter(Boolean).length;
-          const completionRate = Math.round((approvedDocsByType / REQUIRED_DOCUMENT_TYPES.length) * 100);
+          // Trouver les types de documents obligatoires
+          const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
+          const obligatoryTypeNames = requiredDocTypes.map((dt: any) => dt.libelle.toLowerCase());
+          
+          // Compter les documents obligatoires approuvés
+          const approvedObligatoryDocs = documents.filter((d: any) => {
+            const docTypeName = d.type_document_name?.toLowerCase() || '';
+            return obligatoryTypeNames.some(name => docTypeName.includes(name)) && d.statut === 'approved';
+          }).length;
+          
+          const totalObligatory = requiredDocTypes.length;
+          const completionRate = totalObligatory > 0 ? Math.round((approvedObligatoryDocs / totalObligatory) * 100) : 100;
           
           return completionRate === 100 && (
 
@@ -287,6 +299,7 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
               <AssociationOverviewTab
                 association={association}
                 documents={documents}
+                documentTypes={documentTypes}
               />
             )}
 
@@ -582,10 +595,15 @@ function EditAssociationModal({ association, onClose, onSuccess }: EditAssociati
 
 // Sub-components
 
-function AssociationOverviewTab({ association, documents }: any) {
-  const documentStatus = REQUIRED_DOCUMENT_TYPES.map((type) => {
+function AssociationOverviewTab({ association, documents, documentTypes }: any) {
+  // Filtrer les types de documents obligatoires pour les statistiques
+  const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
+  const obligatoryTypeNames = requiredDocTypes.map((dt: any) => dt.libelle.toLowerCase());
+  
+  // Créer le statut pour TOUS les documents (obligatoires et non obligatoires)
+  const documentStatus = documentTypes.map((docType: any) => {
     const doc = documents.find((d: any) => 
-      d.type_document_name?.toLowerCase().includes(type.toLowerCase())
+      d.type_document_name?.toLowerCase() === docType.libelle.toLowerCase()
     );
     
     let status: 'submitted' | 'approved' | 'rejected' | 'expired' | 'draft' | 'missing' = 'missing';
@@ -594,19 +612,26 @@ function AssociationOverviewTab({ association, documents }: any) {
     }
     
     return {
-      type,
-      label: DOCUMENT_TYPES[type]?.label || type,
+      type: docType.libelle.toLowerCase(),
+      label: docType.libelle,
       status,
       doc,
+      isRequired: docType.obligatoire,
     };
   });
 
-  const validatedCount = documents.filter((d: any) => d.statut === 'approved').length;
-  const pendingCount = documents.filter((d: any) => d.statut === 'submitted').length;
-  const actionCount = documents.filter(
+  // Calculer les stats uniquement sur les documents obligatoires
+  const obligatoryDocs = documents.filter((d: any) => {
+    const docTypeName = d.type_document_name?.toLowerCase() || '';
+    return obligatoryTypeNames.some(name => docTypeName.includes(name));
+  });
+  
+  const validatedCount = obligatoryDocs.filter((d: any) => d.statut === 'approved').length;
+  const pendingCount = obligatoryDocs.filter((d: any) => d.statut === 'submitted').length;
+  const actionCount = obligatoryDocs.filter(
     (d: any) => d.statut === 'rejected' || d.statut === 'expired'
   ).length;
-  const missingCount = documentStatus.filter(ds => ds.status === 'missing').length;
+  const missingCount = documentStatus.filter(ds => ds.status === 'missing' && ds.isRequired).length;
 
   return (
     <div className="space-y-6">
@@ -719,7 +744,7 @@ function AssociationOverviewTab({ association, documents }: any) {
 
       {/* Document Checklist */}
       <div>
-        <h3 className="text-gray-900 mb-4">Documents requis</h3>
+        <h3 className="text-gray-900 mb-4">Tous les documents</h3>
         <div className="space-y-2">
           {documentStatus.map((item) => (
             <div
@@ -728,7 +753,10 @@ function AssociationOverviewTab({ association, documents }: any) {
             >
               <div className="flex items-center gap-3">
                 <DocumentStatusBadge status={item.status} />
-                <span className="text-gray-900">{item.label}</span>
+                <span className="text-gray-900">
+                  {item.label}
+                  {item.isRequired && <span className="ml-2 text-xs text-red-600 font-semibold">*</span>}
+                </span>
               </div>
               {item.doc?.rejectionReason && (
                 <div className="text-sm text-red-600">
@@ -737,6 +765,9 @@ function AssociationOverviewTab({ association, documents }: any) {
               )}
             </div>
           ))}
+        </div>
+        <div className="text-xs text-gray-500 mt-2">
+          * Document obligatoire
         </div>
       </div>
     </div>

@@ -19,6 +19,7 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
   const [sortField, setSortField] = useState<SortField>('name');
   const [associations, setAssociations] = useState<any[]>([]);
   const [associationTypes, setAssociationTypes] = useState<any[]>([]);
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +63,17 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
         const docsData = await API.getDocuments();
         const docsArray = Array.isArray(docsData) ? docsData : (docsData?.results || []);
         setDocuments(docsArray);
+
+        // Charger les types de documents
+        const docTypesData = await API.getDocumentTypes();
+        console.log('RAW docTypesData from API:', docTypesData);
+        const docTypesArray = Array.isArray(docTypesData) ? docTypesData : (docTypesData?.results || []);
+        console.log('Parsed docTypesArray:', docTypesArray);
+        console.log('docTypesArray length:', docTypesArray.length);
+        if (docTypesArray.length > 0) {
+          console.log('First docType structure:', docTypesArray[0]);
+        }
+        setDocumentTypes(docTypesArray);
       } catch (error) {
         console.error('Erreur:', error);
         setAssociations([]);
@@ -76,24 +88,57 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
   const filteredAndSortedAssociations = useMemo(() => {
     // Normalisation : un dossier sans aucun document n'est jamais complet
     const docs = documents;
+    
+    console.log('=== DEBUG AssociationsList ===');
+    console.log('All documentTypes:', JSON.stringify(documentTypes, null, 2));
+    documentTypes.forEach(dt => {
+      console.log(`Type: ${dt.libelle}, obligatoire: ${dt.obligatoire}, type of obligatoire: ${typeof dt.obligatoire}, truthy: ${!!dt.obligatoire}`);
+    });
+    
+    // Essayons différentes façons de filtrer pour déboguer
+    const obligatoryDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
+    const obligatoryDocTypes2 = documentTypes.filter((dt: any) => dt.obligatoire === true);
+    const obligatoryDocTypes3 = documentTypes.filter((dt: any) => dt.obligatoire === 1 || dt.obligatoire === '1' || dt.obligatoire === 'true');
+    
+    console.log('Filter with dt.obligatoire:', obligatoryDocTypes.length, obligatoryDocTypes);
+    console.log('Filter with dt.obligatoire === true:', obligatoryDocTypes2.length, obligatoryDocTypes2);
+    console.log('Filter with 1/"1"/"true":', obligatoryDocTypes3.length, obligatoryDocTypes3);
+    
+    const obligatoryTypeNames = obligatoryDocTypes.map((dt: any) => dt.libelle.toLowerCase());
+    
+    console.log('Total documentTypes:', documentTypes.length);
+    console.log('Obligatory documentTypes:', obligatoryDocTypes);
+    console.log('Obligatory type names:', obligatoryTypeNames);
+    console.log('Total documents:', docs.length);
+    console.log('Total associations:', associations.length);
+    
     let result = associations.map((a) => {
       // Récupérer les documents de cette association
       const associationDocs = docs.filter((d) => d.id_association === a.id_association);
       const hasDocs = associationDocs.length > 0;
 
-      // Compter les documents approuvés par type requis
-      const approvedTypes = REQUIRED_DOCUMENT_TYPES.filter((type) => {
-        return associationDocs.some(
-          (doc) =>
-            doc.type_document_name?.toLowerCase().includes(type.toLowerCase()) &&
-            doc.statut === 'approved'
-        );
-      });
+      // Compter les documents obligatoires approuvés
+      const approvedObligatoryDocs = associationDocs.filter((doc) => {
+        const docTypeName = doc.type_document_name?.toLowerCase() || '';
+        return obligatoryTypeNames.some(name => docTypeName.includes(name)) && doc.statut === 'approved';
+      }).length;
 
-      const approvedCount = approvedTypes.length;
-      const totalRequired = REQUIRED_DOCUMENT_TYPES.length;
+      const approvedCount = approvedObligatoryDocs;
+      const totalRequired = obligatoryDocTypes.length;
       const missingDocuments = Math.max(totalRequired - approvedCount, 0);
-      const completionRate = Math.round((approvedCount / totalRequired) * 100);
+      const completionRate = totalRequired > 0 ? Math.round((approvedCount / totalRequired) * 100) : 0;
+
+      console.log(`Association ${a.nom}:`, {
+        totalDocs: associationDocs.length,
+        approvedObligatoryDocs,
+        totalRequired,
+        missingDocuments,
+        completionRate,
+        associationDocs: associationDocs.map(d => ({ 
+          type: d.type_document_name, 
+          statut: d.statut 
+        }))
+      });
 
       return { ...a, completionRate, missingDocuments, hasDocs, validatedCount: approvedCount, totalRequired };
     });
@@ -135,7 +180,7 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
     });
 
     return result;
-  }, [searchQuery, filterStatus, filterAssociationType, sortField, associations, documents]);
+  }, [searchQuery, filterStatus, filterAssociationType, sortField, associations, documents, documentTypes]);
 
   const getCompletionColor = (rate: number) => {
     if (rate === 100) return 'text-green-700 bg-green-100';
