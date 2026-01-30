@@ -71,7 +71,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             membre = Membre.objects.filter(
                 mandats__association__id_utilisateur=obj
             ).first()
-            
+
             if membre:
                 mandat = Mandat.objects.filter(
                     membre=membre,
@@ -79,7 +79,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
                 ).first()
                 if mandat and mandat.role_type:
                     return mandat.role_type.name
-        except:
+        except Exception:
             pass
         return None
 
