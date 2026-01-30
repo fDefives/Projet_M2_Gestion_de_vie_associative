@@ -357,19 +357,25 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         if user.is_staff:
             # L'admin voit tous les documents
-            return Document.objects.all().select_related(
+            return (
+                Document.objects.all()
+                .select_related(
+                    "id_association",
+                    "id_type_document",
+                    "uploaded_by",
+                )
+            )
+
+        # L'utilisateur voit seulement les documents de son association
+        return (
+            Document.objects.filter(
+                id_association__id_utilisateur=user
+            )
+            .select_related(
                 "id_association",
                 "id_type_document",
                 "uploaded_by",
             )
-
-        # L'utilisateur voit seulement les documents de son association
-        return Document.objects.filter(
-            id_association__id_utilisateur=user
-        ).select_related(
-            "id_association",
-            "id_type_document",
-            "uploaded_by",
         )
 
     def perform_create(self, serializer):
@@ -549,9 +555,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def mark_as_read(self, request):
         """Marque les notifications comme lues"""
         notification_ids = request.data.get("ids", [])
-        Notification.objects.filter(id_notification__in=notification_ids).update(
-            is_read=True
-        )
+        Notification.objects.filter(
+            id_notification__in=notification_ids
+        ).update(is_read=True)
 
         return Response({"message": "Notifications marquées comme lues"})
 
@@ -603,10 +609,15 @@ class MandatViewSet(viewsets.ModelViewSet):
             )
         else:
             # Les utilisateurs ne voient que les mandats de leur association
-            qs = Mandat.objects.filter(association__id_utilisateur=user).select_related(
-                "membre",
-                "association",
-                "role_type",
+            qs = (
+                Mandat.objects.filter(
+                    association__id_utilisateur=user
+                )
+                .select_related(
+                    "membre",
+                    "association",
+                    "role_type",
+                )
             )
 
         if association_id:
@@ -641,10 +652,15 @@ class MandatViewSet(viewsets.ModelViewSet):
                     {"error": "Accès refusé"}, status=status.HTTP_403_FORBIDDEN
                 )
 
-        mandats = Mandat.objects.filter(association_id=association_id).select_related(
-            "membre",
-            "association",
-            "role_type",
+        mandats = (
+            Mandat.objects.filter(
+                association_id=association_id
+            )
+            .select_related(
+                "membre",
+                "association",
+                "role_type",
+            )
         )
 
         serializer = self.get_serializer(mandats, many=True)
