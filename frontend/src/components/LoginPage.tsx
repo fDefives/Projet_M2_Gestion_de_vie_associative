@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LogIn, Building2, AlertCircle } from 'lucide-react';
+import { requestPasswordReset } from '../api';
 
 interface LoginPageProps {
   onLogin: (username: string, password: string) => Promise<void>;
@@ -10,6 +11,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +40,18 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetMessage('');
+    setResetLoading(true);
+    try {
+      await requestPasswordReset(resetEmail || email);
+      setResetMessage('Si un compte existe, un email a été envoyé.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -99,7 +116,54 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               <LogIn className="w-5 h-5" />
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                className="text-blue-600 hover:text-blue-700 text-sm"
+                onClick={() => {
+                  setShowForgotPassword((prev) => !prev);
+                  setResetMessage('');
+                  setResetEmail((prev) => prev || email);
+                }}
+              >
+                Mot de passe oublié ?
+              </button>
+            </div>
           </form>
+
+          {showForgotPassword && (
+            <form onSubmit={handlePasswordReset} className="mt-6 space-y-4">
+              <div>
+                <label htmlFor="reset-email" className="block text-gray-700 mb-2">
+                  Email pour la réinitialisation
+                </label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="email@example.com"
+                  required
+                  disabled={resetLoading}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:bg-gray-100 disabled:text-gray-400 py-3 rounded-lg transition-colors"
+              >
+                {resetLoading ? 'Envoi...' : 'Envoyer le lien de réinitialisation'}
+              </button>
+              {resetMessage && (
+                <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
+                  {resetMessage}
+                </p>
+              )}
+            </form>
+          )}
+
         </div>
       </div>
     </div>

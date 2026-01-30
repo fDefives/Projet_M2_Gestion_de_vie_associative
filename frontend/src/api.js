@@ -155,6 +155,39 @@ export const getCurrentUser = async () => {
   }
 };
 
+/**
+ * Demander un lien de réinitialisation de mot de passe
+ */
+export const requestPasswordReset = async (email) => {
+  try {
+    const response = await api.post('/users/password_reset_request/', { email });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la demande de reset:', error);
+    throw error;
+  }
+};
+
+/**
+ * Confirmer la réinitialisation de mot de passe avec le token
+ */
+export const resetPassword = async (uidb64, token, newPassword, newPassword2) => {
+  try {
+    const response = await api.post('/users/password_reset_confirm/', {
+      uidb64,
+      token,
+      new_password: newPassword,
+      new_password2: newPassword2,
+    });
+    return response.data;
+  } catch (error) {
+    const message = error.response?.data?.error || 'Erreur lors de la réinitialisation';
+    console.error('Erreur lors du reset:', error);
+    throw new Error(message);
+  }
+};
+
+
 // ============= ASSOCIATIONS =============
 
 /**
