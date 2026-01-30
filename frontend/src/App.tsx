@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import { LoginPage } from './components/LoginPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AssociationDashboard } from './components/AssociationDashboard';
+import { ResetPasswordPage } from './components/ResetPasswordPage';
 import * as API from './api';
 
 export type UserRole = 'admin' | 'user' | null;
@@ -15,7 +17,7 @@ export interface User {
   last_name?: string;
 }
 
-export default function App() {
+function AppContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -100,4 +102,36 @@ export default function App() {
   }
 
   return null;
+}
+
+// Composant pour la route de reset password
+function ResetPasswordRoute() {
+  const { uidb64, token } = useParams<{ uidb64: string; token: string }>();
+  const navigate = useNavigate();
+
+  if (!uidb64 || !token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg text-red-600">Lien invalide</div>
+      </div>
+    );
+  }
+
+  const handleSuccess = () => {
+    navigate('/');
+  };
+
+  return <ResetPasswordPage uidb64={uidb64} token={token} onSuccess={handleSuccess} />;
+}
+
+// App wrapper avec Router
+export default function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordRoute />} />
+        <Route path="/" element={<AppContent />} />
+      </Routes>
+    </Router>
+  );
 }

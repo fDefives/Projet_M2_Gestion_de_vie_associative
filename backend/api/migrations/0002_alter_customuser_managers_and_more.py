@@ -7,41 +7,50 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0001_initial'),
+        ("api", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelManagers(
-            name='customuser',
+            name="customuser",
             managers=[
-                ('objects', django.contrib.auth.models.UserManager()),
+                ("objects", django.contrib.auth.models.UserManager()),
             ],
         ),
         migrations.AlterField(
-            model_name='association',
-            name='email_contact',
+            model_name="association",
+            name="email_contact",
             field=models.EmailField(blank=True, max_length=254, null=True),
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='date_joined',
-            field=models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined'),
+            model_name="customuser",
+            name="date_joined",
+            field=models.DateTimeField(
+                default=django.utils.timezone.now, verbose_name="date joined"
+            ),
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='email',
+            model_name="customuser",
+            name="email",
             field=models.EmailField(max_length=254, unique=True),
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='is_active',
+            model_name="customuser",
+            name="is_active",
             field=models.BooleanField(default=True),
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='username',
-            field=models.CharField(error_messages={'unique': 'A user with that username already exists.'}, help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.', max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator()], verbose_name='username'),
+            model_name="customuser",
+            name="username",
+            field=models.CharField(
+                error_messages={"unique": "A user with that username already exists."},
+                help_text="Required. 150 characters or fewer. Letters, digits and "
+                "@/./+/-/_ only.",
+                max_length=150,
+                unique=True,
+                validators=[django.contrib.auth.validators.UnicodeUsernameValidator()],
+                verbose_name="username",
+            ),
         ),
     ]

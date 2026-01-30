@@ -1,10 +1,16 @@
-from django.core.management.base import BaseCommand
-from django.contrib.auth import get_user_model
-from api.models import (
-    Association, AssociationType, TypeDocument,
-    Membre, Mandat, RoleType
-)
 from datetime import date
+
+from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+
+from api.models import (
+    Association,
+    AssociationType,
+    TypeDocument,
+    Membre,
+    Mandat,
+    RoleType,
+)
 
 User = get_user_model()
 
@@ -18,9 +24,7 @@ class Command(BaseCommand):
         # ======================================================
         if AssociationType.objects.exists():
             self.stdout.write(
-                self.style.WARNING(
-                    "Database already initialized. Skipping init_db."
-                )
+                self.style.WARNING("Database already initialized. Skipping init_db.")
             )
             return
 
@@ -50,8 +54,13 @@ class Command(BaseCommand):
         # TYPES D’ASSOCIATION
         # ======================================================
         assoc_types = [
-            "Écologie", "Culture", "Solidarité",
-            "Musique", "International", "Sport", "Histoire"
+            "Écologie",
+            "Culture",
+            "Solidarité",
+            "Musique",
+            "International",
+            "Sport",
+            "Histoire",
         ]
 
         assoc_type_map = {}
@@ -65,24 +74,69 @@ class Command(BaseCommand):
         # ASSOCIATIONS
         # ======================================================
         associations = [
-            ("BLAIROUDEURS", "blairoudeurs.larochelle@gmail.com",
-             "Protection de l’environnement.", "Maison des Étudiants", "Écologie"),
-            ("CULTIVE TA TÊTE ET TON ASSIETTE", "ctta.univlr@gmail.com",
-             "Potager universitaire.", "IUT La Rochelle", "Écologie"),
-            ("PRIMROSE", "projet.primrose@gmail.com",
-             "Protections hygiéniques écologiques.", "Avenue Michel Crépeau", "Solidarité"),
-            ("LES RUCHELAISES", "lesruchelaises.lru@gmail.com",
-             "Apiculture et ateliers.", "La Rochelle", "Écologie"),
-            ("ENSEMBLE MUSICAL UNIVERSITAIRE", "contact.emulr@gmail.com",
-             "Groupe de musique étudiant.", "Maison des Étudiants", "Musique"),
-            ("ESN LA ROCHELLE", "contact@esnlarochelle.org",
-             "Accueil des étudiants internationaux.", "Maison des Étudiants", "International"),
-            ("LEMONSEA", "webmaster.lemonsea@gmail.com",
-             "ONG sur l’acidification des océans.", "26 Rue de la Gloire", "Écologie"),
-            ("UNI'VERT", "univert.lr@gmail.com",
-             "Sensibilisation écologique.", "39 Rue François de Vaux", "Écologie"),
-            ("LEGIO XX VALERIA VICTRIX", "valeriavictrix.legio.xx@gmail.com",
-             "Reconstitution romaine.", "La Rochelle", "Histoire"),
+            (
+                "BLAIROUDEURS",
+                "blairoudeurs.larochelle@gmail.com",
+                "Protection de l’environnement.",
+                "Maison des Étudiants",
+                "Écologie",
+            ),
+            (
+                "CULTIVE TA TÊTE ET TON ASSIETTE",
+                "ctta.univlr@gmail.com",
+                "Potager universitaire.",
+                "IUT La Rochelle",
+                "Écologie",
+            ),
+            (
+                "PRIMROSE",
+                "projet.primrose@gmail.com",
+                "Protections hygiéniques écologiques.",
+                "Avenue Michel Crépeau",
+                "Solidarité",
+            ),
+            (
+                "LES RUCHELAISES",
+                "lesruchelaises.lru@gmail.com",
+                "Apiculture et ateliers.",
+                "La Rochelle",
+                "Écologie",
+            ),
+            (
+                "ENSEMBLE MUSICAL UNIVERSITAIRE",
+                "contact.emulr@gmail.com",
+                "Groupe de musique étudiant.",
+                "Maison des Étudiants",
+                "Musique",
+            ),
+            (
+                "ESN LA ROCHELLE",
+                "contact@esnlarochelle.org",
+                "Accueil des étudiants internationaux.",
+                "Maison des Étudiants",
+                "International",
+            ),
+            (
+                "LEMONSEA",
+                "webmaster.lemonsea@gmail.com",
+                "ONG sur l’acidification des océans.",
+                "26 Rue de la Gloire",
+                "Écologie",
+            ),
+            (
+                "UNI'VERT",
+                "univert.lr@gmail.com",
+                "Sensibilisation écologique.",
+                "39 Rue François de Vaux",
+                "Écologie",
+            ),
+            (
+                "LEGIO XX VALERIA VICTRIX",
+                "valeriavictrix.legio.xx@gmail.com",
+                "Reconstitution romaine.",
+                "La Rochelle",
+                "Histoire",
+            ),
         ]
 
         assoc_map = {}
@@ -104,10 +158,16 @@ class Command(BaseCommand):
         # TYPES DE RÔLES
         # ======================================================
         role_names = [
-            "Président", "Vice-président", "Trésorier",
-            "Vice-trésorier", "Secrétaire", "Administrateur",
-            "Communication", "Responsable image", "Membre",
-            "Co-président"
+            "Président",
+            "Vice-président",
+            "Trésorier",
+            "Vice-trésorier",
+            "Secrétaire",
+            "Administrateur",
+            "Communication",
+            "Responsable image",
+            "Membre",
+            "Co-président",
         ]
 
         role_map = {}
@@ -202,6 +262,4 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("✓ Document types created"))
 
-        self.stdout.write(
-            self.style.SUCCESS("\n✓ Database initialized successfully!")
-        )
+        self.stdout.write(self.style.SUCCESS("\n✓ Database initialized successfully!"))

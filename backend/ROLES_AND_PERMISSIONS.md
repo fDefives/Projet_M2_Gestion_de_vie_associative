@@ -3,6 +3,7 @@
 ## Vue d'ensemble
 
 L'API implémente un système de contrôle d'accès basé sur les rôles (RBAC) avec **2 rôles principaux**:
+
 1. **Admin** - Accès complet à toutes les ressources
 2. **User** (Utilisateur) - Accès limité à ses propres données
 
@@ -11,6 +12,7 @@ L'API implémente un système de contrôle d'accès basé sur les rôles (RBAC) 
 ### 👨‍💼 Administrateur (Admin)
 
 #### Permissions:
+
 - ✅ Voir **tous les documents** de **toutes les associations**
 - ✅ **Approuver/Rejeter** les documents soumis
 - ✅ Accéder à **tous les utilisateurs** et leurs profils
@@ -20,6 +22,7 @@ L'API implémente un système de contrôle d'accès basé sur les rôles (RBAC) 
 - ✅ Créer des **notifications** pour toutes les associations
 
 #### Endpoints spécifiques (Admin):
+
 ```
 GET    /api/documents/
 GET    /api/documents/by_association/?association_id=1
@@ -40,6 +43,7 @@ DELETE /api/type-documents/{id}/
 ### 👤 Utilisateur Standard (User)
 
 #### Permissions:
+
 - ✅ Voir **uniquement ses documents** (de son association)
 - ✅ **Ajouter** de nouveaux documents
 - ✅ **Modifier/Supprimer** ses propres documents uniquement
@@ -51,6 +55,7 @@ DELETE /api/type-documents/{id}/
 - ❌ **NE PEUT PAS** accéder aux données d'autres utilisateurs
 
 #### Endpoints accessibles (User):
+
 ```
 GET    /api/documents/          (Ses documents uniquement)
 GET    /api/documents/my_documents/
@@ -90,6 +95,7 @@ POST   /api/notifications/mark_as_read/
 ```
 
 **Processus:**
+
 1. Utilisateur envoie `username` et `password`
 2. Django valide les identifiants
 3. JWT token retourné (access + refresh)
@@ -99,6 +105,7 @@ POST   /api/notifications/mark_as_read/
 ### 2. Vérification de Rôle
 
 À chaque requête:
+
 1. Middleware vérifie le JWT token
 2. Récupère l'utilisateur associé
 3. Extrait le rôle (`role: 'admin'` ou `role: 'user'`)
@@ -126,36 +133,36 @@ def get_queryset(self):
 
 ### Documents - Logique Spécifique
 
-| Opération | Admin | User | Visiteur |
-|-----------|-------|------|----------|
-| Voir tous les documents | ✅ | ❌ | ❌ |
-| Voir ses documents | ✅ | ✅ | ❌ |
-| Ajouter un document | ✅ | ✅ | ❌ |
-| Modifier son document | ✅ | ✅ | ❌ |
-| Modifier un document d'un autre | ✅ | ❌ | ❌ |
-| Supprimer son document | ✅ | ✅ | ❌ |
-| Supprimer un document d'un autre | ✅ | ❌ | ❌ |
-| Approuver un document | ✅ | ❌ | ❌ |
-| Rejeter un document | ✅ | ❌ | ❌ |
+| Opération                        | Admin | User | Visiteur |
+|----------------------------------|-------|------|----------|
+| Voir tous les documents          | ✅     | ❌    | ❌        |
+| Voir ses documents               | ✅     | ✅    | ❌        |
+| Ajouter un document              | ✅     | ✅    | ❌        |
+| Modifier son document            | ✅     | ✅    | ❌        |
+| Modifier un document d'un autre  | ✅     | ❌    | ❌        |
+| Supprimer son document           | ✅     | ✅    | ❌        |
+| Supprimer un document d'un autre | ✅     | ❌    | ❌        |
+| Approuver un document            | ✅     | ❌    | ❌        |
+| Rejeter un document              | ✅     | ❌    | ❌        |
 
 ### Associations
 
-| Opération | Admin | User |
-|-----------|-------|------|
-| Voir toutes les associations | ✅ | ❌ |
-| Voir sa propre association | ✅ | ✅ |
-| Créer une association | ✅ | ✅ |
-| Modifier sa propre association | ✅ | ✅ |
-| Modifier une autre association | ✅ | ❌ |
+| Opération                      | Admin | User |
+|--------------------------------|-------|------|
+| Voir toutes les associations   | ✅     | ❌    |
+| Voir sa propre association     | ✅     | ✅    |
+| Créer une association          | ✅     | ✅    |
+| Modifier sa propre association | ✅     | ✅    |
+| Modifier une autre association | ✅     | ❌    |
 
 ### Utilisateurs
 
-| Opération | Admin | User |
-|-----------|-------|------|
-| Voir tous les utilisateurs | ✅ | ❌ |
-| Voir son profil | ✅ | ✅ |
-| Modifier son profil | ✅ | Partiel |
-| Voir les profils d'autres | ✅ | ❌ |
+| Opération                  | Admin | User    |
+|----------------------------|-------|---------|
+| Voir tous les utilisateurs | ✅     | ❌       |
+| Voir son profil            | ✅     | ✅       |
+| Modifier son profil        | ✅     | Partiel |
+| Voir les profils d'autres  | ✅     | ❌       |
 
 ## Implémentation des Permissions
 
@@ -265,6 +272,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 ### Token JWT
 
 La payload JWT contient:
+
 ```json
 {
   "user_id": 1,
@@ -284,13 +292,13 @@ La payload JWT contient:
 
 ## Gestion des Erreurs
 
-| Erreur | Code HTTP | Cause |
-|--------|-----------|-------|
-| Token invalide/manquant | 401 | Pas d'authentification |
-| Permission refusée | 403 | Rôle insuffisant |
-| Ressource introuvable | 404 | ID invalide |
-| Données invalides | 400 | Validation échouée |
-| Conflit | 409 | Données en conflit |
+| Erreur                  | Code HTTP | Cause                  |
+|-------------------------|-----------|------------------------|
+| Token invalide/manquant | 401       | Pas d'authentification |
+| Permission refusée      | 403       | Rôle insuffisant       |
+| Ressource introuvable   | 404       | ID invalide            |
+| Données invalides       | 400       | Validation échouée     |
+| Conflit                 | 409       | Données en conflit     |
 
 ## Scénarios d'Utilisation Recommandés
 
