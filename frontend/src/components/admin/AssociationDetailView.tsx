@@ -105,6 +105,7 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
   const [error, setError] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
 
   const loadMembers = async (id: number) => {
     try {
@@ -135,6 +136,10 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
         const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
         const filteredDocs = docs.filter((d: any) => d.id_association === associationId);
         setAssociationDocs(filteredDocs);
+
+        // Load document types
+        const typesData = await API.getDocumentTypes();
+        setDocumentTypes(Array.isArray(typesData) ? typesData : typesData?.results || []);
 
         // Load members for this association
         await loadMembers(associationId);
@@ -245,19 +250,28 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
     }
   };
 
-  // Calculate completion rate and statistics
-  // Count only approved documents for each required type
-  const approvedDocsByType = REQUIRED_DOCUMENT_TYPES.map(type => {
+  // Calculate completion rate and statistics based on mandatory documents only
+  const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
+  const obligatoryTypeNames = requiredDocTypes.map((dt: any) => dt.libelle.toLowerCase());
+  
+  // Count only approved mandatory documents
+  const approvedDocsByType = requiredDocTypes.map(type => {
     return associationDocs.find(
-      d => d.type_document_name?.toLowerCase().includes(type.toLowerCase())
+      d => d.type_document_name?.toLowerCase().includes(type.libelle.toLowerCase())
     )?.statut === 'approved';
   }).filter(Boolean).length;
 
+  // Filter documents to get only mandatory ones
+  const obligatoryDocs = associationDocs.filter((d: any) => {
+    const docTypeName = d.type_document_name?.toLowerCase() || '';
+    return obligatoryTypeNames.some(name => docTypeName.includes(name));
+  });
+
   const documentStats = {
-    total: REQUIRED_DOCUMENT_TYPES.length,
-    validated: associationDocs.filter(d => d.statut === 'approved').length,
-    pending: associationDocs.filter(d => d.statut === 'submitted').length,
-    rejected: associationDocs.filter(d => d.statut === 'rejected').length,
+    total: requiredDocTypes.length,
+    validated: obligatoryDocs.filter(d => d.statut === 'approved').length,
+    pending: obligatoryDocs.filter(d => d.statut === 'submitted').length,
+    rejected: obligatoryDocs.filter(d => d.statut === 'rejected').length,
     expired: associationDocs.filter(d => d.statut === 'expired').length,
   };
 
@@ -442,6 +456,7 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
                   association={association}
                   documents={associationDocs}
                   members={associationMembers}
+                  documentTypes={documentTypes}
                   stats={documentStats}
                   completionRate={completionRate}
                 />
@@ -578,6 +593,7 @@ interface OverviewTabProps {
   association: any;
   documents: DocumentData[];
   members: MembreData[];
+  documentTypes: any[];
   stats: {
     total: number;
     validated: number;
@@ -588,7 +604,7 @@ interface OverviewTabProps {
   completionRate: number;
 }
 
-function OverviewTab({ association, documents, members, stats, completionRate }: OverviewTabProps) {
+function OverviewTab({ association, documents, members, documentTypes, stats, completionRate }: OverviewTabProps) {
   const president = members.find((m) => m.statut_membre === 'president');
 
   return (
@@ -635,22 +651,25 @@ function OverviewTab({ association, documents, members, stats, completionRate }:
         </div>
       )}
 
-      {/* Document checklist */}
+      {/* Document checklist - affiche TOUS les types de documents */}
       <div>
-        <h3 className="text-gray-900 font-semibold mb-4">État des documents requis</h3>
+        <h3 className="text-gray-900 font-semibold mb-4">État de tous les documents</h3>
         <div className="space-y-2">
-          {REQUIRED_DOCUMENT_TYPES.map((type) => {
-            const doc = documents.find(d => d.type_document_name?.toLowerCase() === type.toLowerCase());
+          {documentTypes.map((type: any) => {
+            const doc = documents.find(d => d.type_document_name?.toLowerCase() === type.libelle.toLowerCase());
             const status = doc?.statut || 'missing';
             
             return (
               <div
-                key={type}
+                key={type.id_type_document}
                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <DocumentStatusBadge status={status as DocumentStatus} />
-                  <span className="text-gray-900 font-medium">{DOCUMENT_TYPES[type]?.label || type}</span>
+                  <span className="text-gray-900 font-medium">
+                    {type.libelle}
+                    {type.obligatoire && <span className="ml-2 text-xs text-red-600 font-semibold">*</span>}
+                  </span>
                 </div>
                 {doc && (
                   <div className="text-sm text-gray-600">
@@ -660,6 +679,9 @@ function OverviewTab({ association, documents, members, stats, completionRate }:
               </div>
             );
           })}
+        </div>
+        <div className="text-xs text-gray-500 mt-2">
+          * Document obligatoire
         </div>
       </div>
     </div>

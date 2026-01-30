@@ -22,6 +22,7 @@ const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
 export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOverviewProps) {
   const [associations, setAssociations] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [showValidationModal, setShowValidationModal] = useState(false);
@@ -38,6 +39,9 @@ export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOver
         const docData = await API.getDocuments();
         const docArray = Array.isArray(docData) ? docData : (docData?.results || []);
         setDocuments(docArray);
+
+        const typesData = await API.getDocumentTypes();
+        setDocumentTypes(Array.isArray(typesData) ? typesData : typesData?.results || []);
       } catch (error) {
         console.error('Erreur:', error);
       } finally {
@@ -113,6 +117,8 @@ export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOver
     console.log('Loading:', loading, 'Associations count:', associations.length);
     const data = associations;
     const docs = documents;
+    const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
+    const obligatoryTypeNames = requiredDocTypes.map((dt: any) => dt.libelle.toLowerCase());
 
     const associationHasDocs = (assoc: any) =>
       docs.some(
@@ -122,16 +128,19 @@ export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOver
     const normalized = data.map((a) => {
       const assocDocs = docs.filter((d) => d.id_association === a.id_association || d.id_association === a.id);
       const hasDocs = assocDocs.length > 0;
-      const approvedTypes = REQUIRED_DOCUMENT_TYPES.filter((type) =>
-        assocDocs.some(
-          (doc) => doc.type_document_name?.toLowerCase().includes(type.toLowerCase()) && doc.statut === 'approved'
-        )
-      );
-      const approvedCount = approvedTypes.length;
-      const totalRequired = REQUIRED_DOCUMENT_TYPES.length;
+      
+      // Filter to get only mandatory documents
+      const obligatoryDocs = assocDocs.filter((d: any) => {
+        const docTypeName = d.type_document_name?.toLowerCase() || '';
+        return obligatoryTypeNames.some(name => docTypeName.includes(name));
+      });
+      
+      const approvedCount = obligatoryDocs.filter((d: any) => d.statut === 'approved').length;
+      const totalRequired = requiredDocTypes.length;
       const completionRate = totalRequired > 0 ? Math.round((approvedCount / totalRequired) * 100) : 0;
+      const missingDocuments = Math.max(totalRequired - approvedCount, 0);
 
-      return { ...a, completionRate, hasDocs };
+      return { ...a, completionRate, hasDocs, missingDocuments };
     });
 
     const total = normalized.length;
@@ -158,7 +167,7 @@ export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOver
       rejectedDocs,
       normalized,
     };
-  }, [associations, documents, loading]);
+  }, [associations, documents, documentTypes, loading]);
 
   const incompleteAssociations = stats.normalized
     .filter((a: any) => a.completionRate < 100 || !a.hasDocs)
