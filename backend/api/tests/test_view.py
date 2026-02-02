@@ -111,3 +111,59 @@ def test_register_user(api_client):
 def test_me_requires_auth(api_client):
     response = api_client.get("/api/users/me/")
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_association_queryset_admin(api_client, admin_user, association):
+    api_client.force_authenticate(user=admin_user)
+    resp = api_client.get("/api/associations/")
+    assert resp.status_code == 200
+    assert len(resp.data) >= 1
+
+
+@pytest.mark.django_db
+def test_my_documents(api_client, document, normal_user):
+    api_client.force_authenticate(user=normal_user)
+    resp = api_client.get("/api/documents/my_documents/")
+    assert resp.status_code == 200
+    assert len(resp.data) == 1
+
+
+@pytest.mark.django_db
+def test_documents_by_association_missing_param(api_client, normal_user):
+    api_client.force_authenticate(user=normal_user)
+    resp = api_client.get("/api/documents/by_association/")
+    assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_documents_by_status(api_client, document, normal_user):
+    api_client.force_authenticate(user=normal_user)
+    resp = api_client.get("/api/documents/by_status/?status=submitted")
+    assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_mark_notifications_as_read(api_client, notification, normal_user):
+    api_client.force_authenticate(user=normal_user)
+    resp = api_client.post(
+        "/api/notifications/mark_as_read/",
+        {"ids": [notification.id_notification]},
+    )
+    assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_mandat_by_association_missing_param(api_client, normal_user):
+    api_client.force_authenticate(user=normal_user)
+    resp = api_client.get("/api/mandats/by_association/")
+    assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_mandat_by_membre(api_client, mandat, normal_user, membre):
+    api_client.force_authenticate(user=normal_user)
+    resp = api_client.get(
+        f"/api/mandats/by_membre/?membre_id={membre.id_membre}"
+    )
+    assert resp.status_code == 200
