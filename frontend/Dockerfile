@@ -8,13 +8,10 @@ WORKDIR /app
 COPY package*.json ./
 
 # Installer les dépendances
-RUN npm install
+RUN npm ci
 
 # Copier le reste de l'application
 COPY . .
 
-# Port utilisé par React
-EXPOSE 3000
-
-# Lancer le serveur Vite en s'assurant que les dépendances existent
-CMD ["sh", "-c", "npm install && npm run dev"]
+# Générer le build statique et le copier dans le volume partagé /dist
+CMD ["sh", "-c", "npm run build && cp -r dist/* /dist"]
