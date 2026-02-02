@@ -363,6 +363,41 @@ class RoleTypeSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=False)
+    email = serializers.EmailField(required=False)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "first_name", "last_name"]
+
+    def validate_username(self, value):
+        user = self.context["request"].user
+        if (
+            User.objects.filter(username=value)
+            .exclude(id=user.id)
+            .exists()
+        ):
+            raise serializers.ValidationError(
+                "Ce nom d'utilisateur est déjà utilisé."
+            )
+        return value
+
+    def validate_email(self, value):
+        user = self.context["request"].user
+        if (
+            User.objects.filter(email=value)
+            .exclude(id=user.id)
+            .exists()
+        ):
+            raise serializers.ValidationError(
+                "Cette adresse email est déjà utilisée."
+            )
+        return value
+
+
 class MandatSerializer(serializers.ModelSerializer):
     """Serializer pour les mandats"""
 
