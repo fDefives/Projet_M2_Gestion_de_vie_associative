@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle2, Clock, TrendingUp, Users, FileText, AlertTriangle, Check, X, Search } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Users, AlertTriangle, Check, X, Search } from 'lucide-react';
 import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
 import * as API from '../../api';
 
@@ -16,8 +16,6 @@ interface StatsOverviewProps {
   onSelectAssociation: (association: Association) => void;
   refreshKey?: number;
 }
-
-const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
 
 export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOverviewProps) {
   const [associations, setAssociations] = useState<any[]>([]);
@@ -114,7 +112,6 @@ export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOver
   };
 
   const stats = useMemo(() => {
-    console.log('Loading:', loading, 'Associations count:', associations.length);
     const data = associations;
     const docs = documents;
     const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);

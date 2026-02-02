@@ -81,15 +81,6 @@ interface AssociationDetailViewProps {
   onDataChanged?: () => void;
 }
 
-const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
-
-const DOCUMENT_TYPES: Record<string, { label: string }> = {
-  statuts: { label: 'Statuts' },
-  assurance: { label: 'Assurance' },
-  budget: { label: 'Budget' },
-  rapport: { label: 'Rapport' },
-};
-
 export function AssociationDetailView({ association, onBack, onDataChanged }: AssociationDetailViewProps) {
   const associationId = association.id_association || association.id;
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -286,12 +277,6 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
 
   // Use association details with fallback to association prop
   const displayAssociation = { ...association, ...associationDetails };
-
-  // Debug description
-  console.log('Description values:');
-  console.log('desc_association:', displayAssociation.desc_association);
-  console.log('description:', displayAssociation.description);
-  console.log('Full association:', displayAssociation);
 
   return (
     <div className="space-y-6">

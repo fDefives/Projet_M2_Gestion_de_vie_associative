@@ -32,10 +32,6 @@ export function SettingsPanel() {
       const rolesList = Array.isArray(rolesRes) ? rolesRes : rolesRes?.results || [];
       const assosList = Array.isArray(assosRes) ? assosRes : assosRes?.results || [];
 
-      console.log('Types de documents chargés:', docsList);
-      console.log('Types de rôles chargés:', rolesList);
-      console.log('Types d\'associations chargés:', assosList);
-
       setDocumentTypes(docsList);
       setRoleTypes(rolesList);
       setAssociationTypes(assosList);
@@ -481,7 +477,6 @@ function AddTypeModal({ type, onClose, onSuccess }: AddTypeModalProps) {
           const createdRole = await API.createRoleType({
             name: formData.name,
           });
-          console.log('Rôle créé:', createdRole);
           break;
         case 'associations':
           await API.createAssociationType({
@@ -489,7 +484,6 @@ function AddTypeModal({ type, onClose, onSuccess }: AddTypeModalProps) {
           });
           break;
       }
-      console.log('Appel de onSuccess() après création');
       onSuccess();
     } catch (err) {
       console.error('Erreur lors de la création:', err);

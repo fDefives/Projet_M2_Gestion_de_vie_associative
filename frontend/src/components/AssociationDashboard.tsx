@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, FileText, Users, Upload, AlertCircle, CheckCircle2, Clock, Download, Plus, Edit2, Trash2, Search, Building2, Mail, Phone, Instagram } from 'lucide-react';
+import { LogOut, FileText, Upload, AlertCircle, CheckCircle2, Clock, Download, Edit2, Search, Building2, Mail, Phone, Instagram } from 'lucide-react';
 import { User } from '../App';
 import { DocumentStatusBadge } from './shared/DocumentStatusBadge';
 import { MandatsManager } from './admin/MandatsManager';
 import * as API from '../api';
-
-const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
-
-const DOCUMENT_TYPES: Record<string, { label: string }> = {
-  statuts: { label: 'Statuts' },
-  assurance: { label: 'Assurance' },
-  budget: { label: 'Budget' },
-  rapport: { label: 'Rapport' },
-};
 
 interface AssociationDashboardProps {
   user: User;
@@ -359,9 +350,9 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Déposer un document</h2>
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Importer un document</h2>
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -369,7 +360,7 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Type de document <span className="text-red-500">*</span>
@@ -421,29 +412,30 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
                   </p>
                 )}
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    setShowUploadModal(false);
-                    setSelectedFile(null);
-                    setSelectedDocType('');
-                    setDateEmission('');
-                    setError('');
-                  }}
-                  disabled={uploading}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleUploadDocument}
-                  disabled={!selectedFile || !selectedDocType || !dateEmission || uploading}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {uploading ? 'Envoi en cours...' : 'Déposer le document'}
-                </button>
-              </div>
+            <div className="h-6" />
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setSelectedFile(null);
+                  setSelectedDocType('');
+                  setDateEmission('');
+                  setError('');
+                }}
+                disabled={uploading}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleUploadDocument}
+                disabled={!selectedFile || !selectedDocType || !dateEmission || uploading}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {uploading ? 'Envoi en cours...' : 'Importer'}
+              </button>
             </div>
           </div>
         </div>

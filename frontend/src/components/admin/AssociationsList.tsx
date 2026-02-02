@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, Download, Mail, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight } from 'lucide-react';
 import * as API from '../../api';
 
 interface AssociationsListProps {
@@ -9,8 +9,6 @@ interface AssociationsListProps {
 
 type FilterStatus = 'all' | 'complete' | 'incomplete' | 'pending';
 type SortField = 'name' | 'completion' | 'missing';
-
-const REQUIRED_DOCUMENT_TYPES = ['statuts', 'assurance', 'budget', 'rapport'];
 
 export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: AssociationsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,12 +25,9 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
     const loadData = async () => {
       try {
         const data = await API.getAssociations();
-        console.log('Données brutes de l\'API:', data);
         
         // Gérer la pagination Django REST Framework
         const assoArray = Array.isArray(data) ? data : (data?.results || []);
-        
-        console.log('Associations chargées:', assoArray);
         // Convertir les données de la BDD au format attendu
         const formatted = assoArray.map((asso: any) => ({
           id_association: asso.id_association,
@@ -49,14 +44,11 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
           tel_contact: asso.tel_contact,
           num_siret: asso.num_siret,
         }));
-        console.log('Associations formatées:', formatted);
         setAssociations(formatted);
 
         // Charger les types d'associations
         const typesData = await API.getAssociationTypes();
-        console.log('Données brutes types:', typesData);
         const typesArray = Array.isArray(typesData) ? typesData : (typesData?.results || []);
-        console.log('Types formatés:', typesArray);
         setAssociationTypes(typesArray);
 
         // Charger les documents pour savoir si un dossier existe vraiment
@@ -66,13 +58,7 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
 
         // Charger les types de documents
         const docTypesData = await API.getDocumentTypes();
-        console.log('RAW docTypesData from API:', docTypesData);
         const docTypesArray = Array.isArray(docTypesData) ? docTypesData : (docTypesData?.results || []);
-        console.log('Parsed docTypesArray:', docTypesArray);
-        console.log('docTypesArray length:', docTypesArray.length);
-        if (docTypesArray.length > 0) {
-          console.log('First docType structure:', docTypesArray[0]);
-        }
         setDocumentTypes(docTypesArray);
       } catch (error) {
         console.error('Erreur:', error);
@@ -89,28 +75,8 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
     // Normalisation : un dossier sans aucun document n'est jamais complet
     const docs = documents;
     
-    console.log('=== DEBUG AssociationsList ===');
-    console.log('All documentTypes:', JSON.stringify(documentTypes, null, 2));
-    documentTypes.forEach(dt => {
-      console.log(`Type: ${dt.libelle}, obligatoire: ${dt.obligatoire}, type of obligatoire: ${typeof dt.obligatoire}, truthy: ${!!dt.obligatoire}`);
-    });
-    
-    // Essayons différentes façons de filtrer pour déboguer
     const obligatoryDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
-    const obligatoryDocTypes2 = documentTypes.filter((dt: any) => dt.obligatoire === true);
-    const obligatoryDocTypes3 = documentTypes.filter((dt: any) => dt.obligatoire === 1 || dt.obligatoire === '1' || dt.obligatoire === 'true');
-    
-    console.log('Filter with dt.obligatoire:', obligatoryDocTypes.length, obligatoryDocTypes);
-    console.log('Filter with dt.obligatoire === true:', obligatoryDocTypes2.length, obligatoryDocTypes2);
-    console.log('Filter with 1/"1"/"true":', obligatoryDocTypes3.length, obligatoryDocTypes3);
-    
     const obligatoryTypeNames = obligatoryDocTypes.map((dt: any) => dt.libelle.toLowerCase());
-    
-    console.log('Total documentTypes:', documentTypes.length);
-    console.log('Obligatory documentTypes:', obligatoryDocTypes);
-    console.log('Obligatory type names:', obligatoryTypeNames);
-    console.log('Total documents:', docs.length);
-    console.log('Total associations:', associations.length);
     
     let result = associations.map((a) => {
       // Récupérer les documents de cette association
@@ -127,18 +93,6 @@ export function AssociationsList({ onSelectAssociation, refreshKey = 0 }: Associ
       const totalRequired = obligatoryDocTypes.length;
       const missingDocuments = Math.max(totalRequired - approvedCount, 0);
       const completionRate = totalRequired > 0 ? Math.round((approvedCount / totalRequired) * 100) : 0;
-
-      console.log(`Association ${a.nom}:`, {
-        totalDocs: associationDocs.length,
-        approvedObligatoryDocs,
-        totalRequired,
-        missingDocuments,
-        completionRate,
-        associationDocs: associationDocs.map(d => ({ 
-          type: d.type_document_name, 
-          statut: d.statut 
-        }))
-      });
 
       return { ...a, completionRate, missingDocuments, hasDocs, validatedCount: approvedCount, totalRequired };
     });
