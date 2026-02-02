@@ -39,7 +39,6 @@ class Command(BaseCommand):
                 "username": "admin@example.com",
                 "is_staff": True,
                 "is_superuser": True,
-                "role": "admin",
             },
         )
 

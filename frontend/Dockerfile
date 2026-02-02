@@ -14,4 +14,4 @@ RUN npm ci
 COPY . .
 
 # Générer le build statique et le copier dans le volume partagé /dist
-CMD ["sh", "-c", "npm run build && cp -r dist/* /dist"]
+CMD ["sh", "-c", "npm run build && mkdir -p /dist && cp -r build/* /dist"]
