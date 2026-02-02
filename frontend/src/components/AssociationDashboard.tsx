@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, FileText, AlertCircle, CheckCircle2, Clock, Download, Edit2, Search, Building2, Mail, Phone, Instagram, Upload } from 'lucide-react';
+import { LogOut, FileText, AlertCircle, CheckCircle2, Clock, Download, Edit2, Search, Building2, Mail, Phone, Instagram, Upload, Settings } from 'lucide-react';
 import { User } from '../App';
 import { DocumentStatusBadge } from './shared/DocumentStatusBadge';
 import { MandatsManager } from './admin/MandatsManager';
 import { UserUploadDocumentModal } from './shared/modals/UserUploadDocumentModal';
 import { UserEditAssociationModal } from './shared/modals/UserEditAssociationModal';
+import { UserSettingsModal } from './shared/modals/UserSettingsModal';
 import * as API from '../api';
 
 interface AssociationDashboardProps {
@@ -18,6 +19,7 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
   const [activeTab, setActiveTab] = useState<AssociationTab>('overview');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
   const [association, setAssociation] = useState<any>(null);
   const [documents, setDocuments] = useState<any[]>([]);
   const [documentTypes, setDocumentTypes] = useState<any[]>([]);
@@ -106,6 +108,13 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
               <div className="flex items-center gap-4">
                 <span className="text-gray-700">{user.email}</span>
                 <button
+                  onClick={() => setShowUserSettingsModal(true)}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Paramètres du compte"
+                >
+                  <Settings size={20} />
+                </button>
+                <button
                   onClick={onLogout}
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -139,6 +148,13 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
 
             <div className="flex items-center gap-4">
               <span className="text-gray-700">{user.email}</span>
+              <button
+                onClick={() => setShowUserSettingsModal(true)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Paramètres du compte"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
               <button
                 onClick={onLogout}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -283,7 +299,7 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Dirigeants
+                Membres
               </button>
             </div>
           </div>
@@ -333,6 +349,15 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
           onSuccess={loadData}
         />
       )}
+
+      {/* User Settings Modal */}
+      {showUserSettingsModal && (
+        <UserSettingsModal
+          userEmail={user.email}
+          onClose={() => setShowUserSettingsModal(false)}
+          onSuccess={onLogout}
+        />
+      )}
     </div>
   );
 }
@@ -372,9 +397,17 @@ function AssociationOverviewTab({ association, documents, documentTypes }: any) 
   
   const validatedCount = obligatoryDocs.filter((d: any) => d.statut === 'approved').length;
   const pendingCount = obligatoryDocs.filter((d: any) => d.statut === 'submitted').length;
-  const actionCount = obligatoryDocs.filter(
-    (d: any) => d.statut === 'rejected' || d.statut === 'expired'
-  ).length;
+  const approvedTypeNames = new Set(
+    documents
+      .filter((d: any) => d.statut === 'approved')
+      .map((d: any) => (d.type_document_name || '').toLowerCase()),
+  );
+  const actionCount = obligatoryDocs.filter((d: any) => {
+    if (d.statut === 'rejected') return true;
+    if (d.statut !== 'expired') return false;
+    const typeName = (d.type_document_name || '').toLowerCase();
+    return !approvedTypeNames.has(typeName);
+  }).length;
   const missingCount = documentStatus.filter(ds => ds.status === 'missing' && ds.isRequired).length;
 
   return (

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { LogOut, Users, FileText, BarChart3, Settings, Plus } from 'lucide-react';
+import { LogOut, Users, FileText, BarChart3, Settings, Plus, UserCog } from 'lucide-react';
 import DocumentsList from './admin/DocumentsList';
 import { User } from '../App';
 import { AssociationsList } from './admin/AssociationsList';
 import { AssociationDetailView } from './admin/AssociationDetailView';
 import { StatsOverview } from './admin/StatsOverview';
 import { SettingsPanel } from './admin/SettingsPanel';
+import { UserSettingsModal } from './shared/modals/UserSettingsModal';
 import * as API from '../api';
 
 interface AdminDashboardProps {
@@ -35,8 +36,10 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
+    confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
 
   // Load association types on mount
   React.useEffect(() => {
@@ -98,7 +101,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
       email_contact: '',
       tel_contact: '',
     });
-    setNewUser({ email: '', password: '' });
+    setNewUser({ email: '', password: '', confirmPassword: '' });
     setAssociationTypeFilter('');
     setShowCreateModal(false);
   };
@@ -109,7 +112,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
       alert('Tous les champs association sont obligatoires');
       return;
     }
-    if (!newUser.email || !newUser.password) {
+    if (!newUser.email || !newUser.password || !newUser.confirmPassword) {
       alert('Email et mot de passe du compte association sont obligatoires');
       return;
     }
@@ -145,6 +148,11 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
       return;
     }
 
+    if (newUser.password !== newUser.confirmPassword) {
+      alert('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
     try {
       setLoading(true);
       const payload: any = {
@@ -165,7 +173,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
         insta_contact: '',
         association_type: '',
       });
-      setNewUser({ email: '', password: '' });
+      setNewUser({ email: '', password: '', confirmPassword: '' });
       setAssociationTypeFilter('');
       setShowCreateModal(false);
       // Refresh associations list
@@ -191,6 +199,13 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
             
             <div className="flex items-center gap-4">
               <span className="text-gray-700">{user.email}</span>
+              <button
+                onClick={() => setShowUserSettingsModal(true)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Paramètres du compte"
+              >
+                <UserCog className="w-4 h-4" />
+              </button>
               <button
                 onClick={onLogout}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -401,9 +416,9 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                       </div>
 
                     <div className="border-t border-gray-200 pt-3">
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2" style={{ marginTop: '5%' }}>Email utilisateur</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email utilisateur</label>
                           <input
                             type="email"
                             value={newUser.email}
@@ -412,15 +427,27 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                             placeholder="user@mail.com"
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2" style={{ marginTop: '5%' }}>Mot de passe</label>
-                          <input
-                            type="password"
-                            value={newUser.password}
-                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="********"
-                          />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe</label>
+                            <input
+                              type="password"
+                              value={newUser.password}
+                              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="********"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe</label>
+                            <input
+                              type="password"
+                              value={newUser.confirmPassword}
+                              onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="********"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -465,6 +492,15 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
           </main>
         </div>
       </div>
+
+      {/* User Settings Modal */}
+      {showUserSettingsModal && (
+        <UserSettingsModal
+          userEmail={user.email}
+          onClose={() => setShowUserSettingsModal(false)}
+          onSuccess={onLogout}
+        />
+      )}
     </div>
   );
 }

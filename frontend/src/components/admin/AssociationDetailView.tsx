@@ -265,24 +265,30 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center gap-2 text-gray-600">
                 <Building2 className="w-4 h-4" />
-                <span>{association.ufr || '-'}</span>
+                <span>{displayAssociation.ufr || '-'}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Mail className="w-4 h-4" />
-                <span>{association.email_contact || '-'}</span>
+                <span>{displayAssociation.email_contact || '-'}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Phone className="w-4 h-4" />
-                <span>{association.tel_contact || '-'}</span>
+                <span>{displayAssociation.tel_contact || '-'}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Clock className="w-4 h-4" />
                 <span>
-                  {association.date_creation_association
-                    ? new Date(association.date_creation_association).toLocaleDateString('fr-FR')
+                  {displayAssociation.date_creation_association
+                    ? new Date(displayAssociation.date_creation_association).toLocaleDateString('fr-FR')
                     : '-'}
                 </span>
               </div>
+              {displayAssociation.num_siret && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Building2 className="w-4 h-4" />
+                  <span>SIRET: {displayAssociation.num_siret}</span>
+                </div>
+              )}
             </div>
             
             {association.desc_association && (

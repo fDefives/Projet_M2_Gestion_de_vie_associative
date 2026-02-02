@@ -397,6 +397,13 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def update(self, instance, validated_data):
+        # Si l'email est modifié, mettre à jour automatiquement le username
+        if 'email' in validated_data:
+            validated_data['username'] = validated_data['email']
+        
+        return super().update(instance, validated_data)
+
 
 class MandatSerializer(serializers.ModelSerializer):
     """Serializer pour les mandats"""

@@ -790,4 +790,34 @@ export const deleteRoleType = async (id) => {
   }
 };
 
+/**
+ * Mettre à jour le profil utilisateur (email, username, first_name, last_name)
+ */
+export const updateUserProfile = async (data) => {
+  try {
+    const response = await api.patch('/users/me/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du profil:', error);
+    throw error;
+  }
+};
+
+/**
+ * Changer le mot de passe utilisateur
+ */
+export const changeUserPassword = async (oldPassword, newPassword, newPassword2) => {
+  try {
+    const response = await api.post('/users/change_password/', {
+      old_password: oldPassword,
+      new_password: newPassword,
+      new_password2: newPassword2,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors du changement de mot de passe:', error);
+    throw error;
+  }
+};
+
 export default api;

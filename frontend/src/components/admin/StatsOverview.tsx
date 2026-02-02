@@ -147,9 +147,23 @@ export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOver
     const notStarted = normalized.filter((a) => !a.hasDocs).length;
 
     const statusValue = (d: any) => d.status || d.statut;
+    const assocIdValue = (d: any) => d.id_association ?? d.association_id ?? d.association?.id;
+    const docTypeKey = (d: any) =>
+      d.id_type_document ?? d.type_document_id ?? d.type_document?.id ?? d.type_document_name?.toLowerCase() ?? '';
+
+    const approvedKeys = new Set(
+      docs
+        .filter((d) => statusValue(d) === 'approved')
+        .map((d) => `${assocIdValue(d)}::${docTypeKey(d)}`),
+    );
+
     const pendingDocsList = docs.filter((d) => statusValue(d) === 'submitted');
     const pendingDocs = pendingDocsList.length;
-    const expiredDocs = docs.filter((d) => statusValue(d) === 'expired').length;
+    const expiredDocs = docs.filter((d) => {
+      if (statusValue(d) !== 'expired') return false;
+      const key = `${assocIdValue(d)}::${docTypeKey(d)}`;
+      return !approvedKeys.has(key);
+    }).length;
     const rejectedDocs = docs.filter((d) => statusValue(d) === 'rejected').length;
 
     return {

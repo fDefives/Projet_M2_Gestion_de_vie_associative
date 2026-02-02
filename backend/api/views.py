@@ -83,12 +83,33 @@ class UserRegistrationView(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
-        detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated]
+        detail=False, methods=["get", "patch"], permission_classes=[permissions.IsAuthenticated]
     )
     def me(self, request):
-        """Retourne les infos de l'utilisateur connecté"""
-        serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
+        """
+        GET: Retourne les infos de l'utilisateur connecté
+        PATCH: Met à jour le profil de l'utilisateur connecté
+        """
+        if request.method == "GET":
+            serializer = self.get_serializer(request.user)
+            return Response(serializer.data)
+        elif request.method == "PATCH":
+            serializer = UpdateProfileSerializer(
+                request.user,
+                data=request.data,
+                partial=True,
+                context={"request": request},
+            )
+            if serializer.is_valid():
+                serializer.save()
+                return Response(
+                    {
+                        "message": "Profil mis à jour avec succès",
+                        "user": CustomUserSerializer(request.user).data,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=False,
