@@ -2,6 +2,8 @@ from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.permissions import IsAuthenticated
+from .serializers import UpdateProfileSerializer
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -64,6 +66,8 @@ class UserRegistrationView(viewsets.ModelViewSet):
             return PasswordResetRequestSerializer
         elif self.action == "password_reset_confirm":
             return PasswordResetConfirmSerializer
+        elif self.action == "update_profile":
+            return UpdateProfileSerializer
         return CustomUserSerializer
 
     @action(detail=False, methods=["post"], permission_classes=[])
@@ -85,6 +89,37 @@ class UserRegistrationView(viewsets.ModelViewSet):
         """Retourne les infos de l'utilisateur connecté"""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=["patch"],
+        permission_classes=[IsAuthenticated],
+    )
+    def update_profile(self, request):
+        """
+        Permet à l'utilisateur connecté (user ou admin)
+        de modifier son email, prénom et nom.
+
+        PATCH /api/users/update_profile/
+        """
+        serializer = UpdateProfileSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "message": "Profil mis à jour avec succès",
+                    "user": CustomUserSerializer(request.user).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated]
