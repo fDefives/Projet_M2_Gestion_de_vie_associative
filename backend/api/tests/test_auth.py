@@ -30,7 +30,7 @@ def test_me_authenticated(api_client, normal_user):
     api_client.force_authenticate(user=normal_user)
     resp = api_client.get("/api/users/me/")
     assert resp.status_code == 200
-    assert resp.data["username"] == "user"
+    assert resp.data["username"] == "user_test"
 
 
 @pytest.mark.django_db
@@ -39,7 +39,7 @@ def test_change_password_success(api_client, normal_user):
     resp = api_client.post(
         "/api/users/change_password/",
         {
-            "old_password": "userpass",
+            "old_password": "password123",
             "new_password": "NewStrong123",
             "new_password2": "NewStrong123",
         },

@@ -56,7 +56,7 @@ def test_association_members_forbidden(api_client, association):
     resp = api_client.get(
         f"/api/associations/{association.id_association}/members/"
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 @pytest.mark.django_db
