@@ -19,6 +19,19 @@ CREATE TABLE association (
     FOREIGN KEY (id_utilisateur) REFERENCES utilisateur(id_utilisateur)
 );
 
+CREATE TABLE membre (
+    _id_membre_ SERIAL PRIMARY KEY,
+    _prenom_ VARCHAR(100) NOT NULL,
+    _nom_ VARCHAR(100) NOT NULL,
+    _email_ VARCHAR(255),
+    tel VARCHAR(20),
+    date_adhesion DATE NOT NULL,
+    statut_membre VARCHAR(50),
+    date_fin_adhesion DATE,
+    id_association INT NOT NULL,
+    FOREIGN KEY (id_association) REFERENCES association(id_association)
+);
+
 CREATE TABLE dirigeant (
     id_dirigeant SERIAL PRIMARY KEY,
     prenom VARCHAR(100),

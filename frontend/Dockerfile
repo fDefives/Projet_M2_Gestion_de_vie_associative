@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 3000
 
 # Lancer le serveur Vite en s'assurant que les dépendances existent
-CMD ["sh", "-c", "npm install && npm run start"]
+CMD ["sh", "-c", "npm install && npm run dev"]

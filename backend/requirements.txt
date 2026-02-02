@@ -1,3 +1,14 @@
 Django>=4.2
 psycopg2-binary
 djangorestframework
+djangorestframework-simplejwt
+python-decouple
+django-cors-headers
+Pillow
+flake8
+coverage
+selenium
+pytest
+pytest-django
+webdriver-manager
+drf-spectacular

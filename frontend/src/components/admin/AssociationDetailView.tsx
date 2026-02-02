@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Mail,
   Phone,
   Building2,
-  Users,
+  Users, 
   FileText,
   Upload,
   Download,
+  Search,
   Check,
   X,
   Clock,
@@ -16,41 +17,266 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { Association, mockDocuments, mockLeaders, DOCUMENT_TYPES, DocumentType } from '../../lib/mockData';
 import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
+import * as API from '../../api';
+import { MandatsManager } from './MandatsManager';
 
-interface AssociationDetailViewProps {
-  association: Association;
-  onBack: () => void;
+interface AssociationData {
+  id_association: number;
+  nom_association: string;
+  ufr: string;
+  statut: string;
+  email_contact: string;
+  tel_contact: string;
+  date_creation_association: string;
 }
 
-type TabType = 'overview' | 'documents' | 'leaders' | 'history';
+interface DocumentData {
+  id_document: number;
+  nom_fichier: string;
+  statut: 'submitted' | 'approved' | 'rejected' | 'expired' | 'draft';
+  id_type_document: number;
+  type_document_name: string;
+  date_depot: string;
+  date_expiration: string;
+  uploaded_by_email: string;
+  commentaire_refus: string;
+}
 
-export function AssociationDetailView({ association, onBack }: AssociationDetailViewProps) {
+interface MembreData {
+  id_membre: number;
+  prenom: string;
+  nom: string;
+  email: string;
+  tel: string;
+  statut_membre: string;
+  date_adhesion: string;
+  date_fin_adhesion: string;
+}
+
+interface RoleTypeData {
+  id: number;
+  name: string;
+  description: string;
+}
+
+interface MandatData {
+  id_mandat: number;
+  membre: number;
+  membre_detail?: MembreData;
+  association: number;
+  role_type: number;
+  role_type_name?: string;
+  statut: 'active' | 'termine' | 'suspendu';
+  date_debut: string;
+  date_fin: string | null;
+}
+
+type DocumentStatus = 'submitted' | 'approved' | 'rejected' | 'expired' | 'draft' | 'missing';
+type TabType = 'overview' | 'documents' | 'leaders';
+
+interface AssociationDetailViewProps {
+  association: any;
+  onBack: () => void;
+  onDataChanged?: () => void;
+}
+
+export function AssociationDetailView({ association, onBack, onDataChanged }: AssociationDetailViewProps) {
+  const associationId = association.id_association || association.id;
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [associationDocs, setAssociationDocs] = useState<DocumentData[]>([]);
+  const [associationMembers, setAssociationMembers] = useState<MembreData[]>([]);
+  const [editingDocStatus, setEditingDocStatus] = useState<number | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [associationDetails, setAssociationDetails] = useState<any>(association);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
 
-  const associationDocs = mockDocuments.filter((d) => d.associationId === association.id);
-  const associationLeaders = mockLeaders.filter((l) => l.associationId === association.id);
+  const loadMembers = async (id: number) => {
+    try {
+      const membersResponse = await API.getAssociationMembers(id);
+      const membersArray = Array.isArray(membersResponse)
+        ? membersResponse
+        : membersResponse?.results || [];
+      setAssociationMembers(membersArray);
+    } catch (err) {
+      console.error('Error loading association members:', err);
+      setAssociationMembers([]);
+    }
+  };
 
-  const handleValidateDocument = (doc: any) => {
+  // Load association documents, members, and full details
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Load full association details
+        const detailsResponse = await API.getAssociationDetails(association.id_association || association.id);
+        setAssociationDetails(detailsResponse);
+
+        // Load all documents and filter by association
+        const docsResponse = await API.getDocuments();
+        const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
+        const filteredDocs = docs.filter((d: any) => d.id_association === associationId);
+        setAssociationDocs(filteredDocs);
+
+        // Load document types
+        const typesData = await API.getDocumentTypes();
+        setDocumentTypes(Array.isArray(typesData) ? typesData : typesData?.results || []);
+
+        // Load members for this association
+        await loadMembers(associationId);
+      } catch (err) {
+        console.error('Error loading association data:', err);
+        setError('Erreur lors du chargement des données');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [associationId]);
+
+  const handleValidateDocument = (doc: DocumentData) => {
     setSelectedDocument(doc);
     setShowValidationModal(true);
   };
 
-  const handleRejectDocument = () => {
-    console.log('Document rejected:', selectedDocument, rejectionReason);
-    setShowValidationModal(false);
-    setRejectionReason('');
+  const handleUpdateDocumentStatus = async (docId: number, newStatus: string) => {
+    try {
+      setUpdatingStatus(true);
+      await API.updateDocument(docId, { statut: newStatus });
+      
+      // Mettre à jour la liste locale
+      setAssociationDocs(prevDocs => 
+        prevDocs.map(doc => 
+          doc.id_document === docId ? { ...doc, statut: newStatus as any } : doc
+        )
+      );
+      
+      setEditingDocStatus(null);
+      if (onDataChanged) {
+        onDataChanged();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      alert('Impossible de mettre à jour le statut du document');
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
-  const handleApproveDocument = () => {
-    console.log('Document approved:', selectedDocument);
-    setShowValidationModal(false);
+  const handleApproveDocument = async () => {
+    if (!selectedDocument) return;
+    try {
+      await API.approveDocument(selectedDocument.id_document);
+      // Reload documents
+      const docsResponse = await API.getDocuments();
+      const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
+      const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
+      setAssociationDocs(filteredDocs);
+      setShowValidationModal(false);
+      onDataChanged?.();
+    } catch (err) {
+      console.error('Error approving document:', err);
+      setError('Erreur lors de l\'approbation du document');
+    }
   };
+
+  const handleRejectDocument = async () => {
+    if (!selectedDocument || !rejectionReason.trim()) return;
+    try {
+      await API.rejectDocument(selectedDocument.id_document, rejectionReason);
+      // Reload documents
+      const docsResponse = await API.getDocuments();
+      const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
+      const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
+      setAssociationDocs(filteredDocs);
+      setShowValidationModal(false);
+      setRejectionReason('');
+      onDataChanged?.();
+    } catch (err) {
+      console.error('Error rejecting document:', err);
+      setError('Erreur lors du rejet du document');
+    }
+  };
+
+  const handleDownloadDocument = async (doc: DocumentData) => {
+    try {
+      await API.downloadDocument(doc.id_document, doc.nom_fichier);
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      setError('Erreur lors du téléchargement du document');
+    }
+  };
+
+  const handlePreviewDocument = async (doc: DocumentData) => {
+    try {
+      const blob = await API.fetchDocumentBlob(doc.id_document);
+      const url = URL.createObjectURL(new Blob([blob], { type: blob.type || 'application/pdf' }));
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err) {
+      console.error('Error previewing document:', err);
+      setError('Erreur lors de l\'ouverture du document');
+    }
+  };
+
+  const reloadDocuments = async () => {
+    try {
+      const docsResponse = await API.getDocuments();
+      const docs = Array.isArray(docsResponse) ? docsResponse : docsResponse?.results || [];
+      const filteredDocs = docs.filter((d: any) => d.id_association === association.id_association || d.id_association === association.id);
+      setAssociationDocs(filteredDocs);
+    } catch (err) {
+      console.error('Error reloading documents:', err);
+    }
+  };
+
+  // Calculate completion rate and statistics based on mandatory documents only
+  const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
+  const obligatoryTypeNames = requiredDocTypes.map((dt: any) => dt.libelle.toLowerCase());
+  
+  // Count only approved mandatory documents
+  const approvedDocsByType = requiredDocTypes.map(type => {
+    return associationDocs.find(
+      d => d.type_document_name?.toLowerCase().includes(type.libelle.toLowerCase())
+    )?.statut === 'approved';
+  }).filter(Boolean).length;
+
+  // Filter documents to get only mandatory ones
+  const obligatoryDocs = associationDocs.filter((d: any) => {
+    const docTypeName = d.type_document_name?.toLowerCase() || '';
+    return obligatoryTypeNames.some(name => docTypeName.includes(name));
+  });
+
+  const documentStats = {
+    total: requiredDocTypes.length,
+    validated: obligatoryDocs.filter(d => d.statut === 'approved').length,
+    pending: obligatoryDocs.filter(d => d.statut === 'submitted').length,
+    rejected: obligatoryDocs.filter(d => d.statut === 'rejected').length,
+    expired: associationDocs.filter(d => d.statut === 'expired').length,
+  };
+
+  const completionRate = Math.round((approvedDocsByType / documentStats.total) * 100);
+  
+  const displayName = association.nom_association;
+  const displayUFR = association.ufr;
+  const displaySiret = association.num_siret;
+  const displayStatus = association.statut;
+  const displayEmail = association.email_contact;
+  const displayPhone = association.tel_contact;
+
+  // Use association details with fallback to association prop
+  const displayAssociation = { ...association, ...associationDetails };
 
   return (
     <div className="space-y-6">
@@ -67,58 +293,70 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
-              <h1 className="text-gray-900">{association.name}</h1>
-              {association.acronym && (
-                <span className="text-gray-500 text-xl">({association.acronym})</span>
-              )}
+              <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
               <span
-                className={`px-3 py-1 rounded-full text-sm ${
-                  association.status === 'active'
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  displayStatus === 'active'
                     ? 'bg-green-100 text-green-700'
-                    : association.status === 'dormant'
+                    : displayStatus === 'dormant'
                     ? 'bg-gray-100 text-gray-700'
                     : 'bg-blue-100 text-blue-700'
                 }`}
               >
-                {association.status === 'active' ? 'Active' : association.status === 'dormant' ? 'En sommeil' : 'En création'}
+                {displayStatus === 'active' ? 'Active' : displayStatus === 'dormant' ? 'En sommeil' : 'En création'}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center gap-2 text-gray-600">
                 <Building2 className="w-4 h-4" />
-                <span>{association.ufr}</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <FileText className="w-4 h-4" />
-                <span>{association.type}</span>
+                <span>{displayUFR}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Mail className="w-4 h-4" />
-                <span>{association.email}</span>
+                <span>{displayEmail}</span>
               </div>
-              {association.phone && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Phone className="w-4 h-4" />
+                <span>{displayPhone || 'Non fourni'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Clock className="w-4 h-4" />
+                <span>
+                  Créée le {displayAssociation.date_creation_association || displayAssociation.created_at
+                    ? new Date(displayAssociation.date_creation_association || displayAssociation.created_at).toLocaleDateString('fr-FR')
+                    : 'Non renseignée'
+                  }
+                </span>
+              </div>
+              {(displayAssociation.associationTypeName || displayAssociation.association_type_name) && (
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Phone className="w-4 h-4" />
-                  <span>{association.phone}</span>
+                  <span className="text-sm font-medium">Type</span>
+                  <span>{displayAssociation.associationTypeName || displayAssociation.association_type_name}</span>
+                </div>
+              )}
+              {(displayAssociation.insta_contact || displayAssociation.insta) && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <span className="text-sm font-medium">@</span>
+                  <span>{displayAssociation.insta_contact || displayAssociation.insta}</span>
                 </div>
               )}
             </div>
-
-            {association.siret && (
-              <div className="mt-3 text-sm text-gray-600">
-                <span>SIRET : {association.siret}</span>
+            
+            {(displayAssociation.desc_association || displayAssociation.description) && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-sm font-medium text-gray-700 mb-2">Description</div>
+                <div className="text-sm text-gray-600 whitespace-pre-wrap">{displayAssociation.desc_association || displayAssociation.description}</div>
               </div>
             )}
           </div>
 
           <div className="flex flex-col items-end gap-3">
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                <Mail className="w-4 h-4" />
-                Envoyer un email
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300">
+              <button 
+                onClick={() => setShowEditModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
                 <Edit2 className="w-4 h-4" />
                 Modifier
               </button>
@@ -130,18 +368,18 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
                 <div className="w-32 bg-gray-200 rounded-full h-3">
                   <div
                     className={`h-3 rounded-full ${
-                      association.completionRate === 100
+                      completionRate === 100
                         ? 'bg-green-500'
-                        : association.completionRate >= 75
+                        : completionRate >= 75
                         ? 'bg-yellow-500'
-                        : association.completionRate >= 50
+                        : completionRate >= 50
                         ? 'bg-orange-500'
                         : 'bg-red-500'
                     }`}
-                    style={{ width: `${association.completionRate}%` }}
+                    style={{ width: `${completionRate}%` }}
                   ></div>
                 </div>
-                <span className="text-gray-900">{association.completionRate}%</span>
+                <span className="text-gray-900 font-semibold">{completionRate}%</span>
               </div>
             </div>
           </div>
@@ -180,56 +418,81 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              Dirigeants ({associationLeaders.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-4 py-3 border-b-2 transition-colors ${
-                activeTab === 'history'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Historique
+              Membres ({associationMembers.length})
             </button>
           </div>
         </div>
 
         {/* Tab Content */}
         <div className="p-6">
-          {activeTab === 'overview' && (
-            <OverviewTab
-              association={association}
-              documents={associationDocs}
-              leaders={associationLeaders}
-            />
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-4">Chargement des données...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-700">{error}</p>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'overview' && (
+                <OverviewTab
+                  association={association}
+                  documents={associationDocs}
+                  members={associationMembers}
+                  documentTypes={documentTypes}
+                  stats={documentStats}
+                  completionRate={completionRate}
+                />
+              )}
+
+              {activeTab === 'documents' && (
+                <DocumentsTab
+                  documents={associationDocs}
+                  onValidateDocument={handleValidateDocument}
+                  onDownloadDocument={handleDownloadDocument}
+                  onPreviewDocument={handlePreviewDocument}
+                  onUploadClick={() => setShowUploadModal(true)}
+                  editingDocStatus={editingDocStatus}
+                  onEditStatus={setEditingDocStatus}
+                  onUpdateStatus={handleUpdateDocumentStatus}
+                  updatingStatus={updatingStatus}
+                />
+              )}
+
+              {activeTab === 'leaders' && (
+                <MandatsManager
+                  associationId={associationId}
+                  onDataChanged={async () => {
+                    await loadMembers(associationId);
+                    onDataChanged?.();
+                  }}
+                />
+              )}
+
+            </>
           )}
-
-          {activeTab === 'documents' && (
-            <DocumentsTab
-              documents={associationDocs}
-              onValidateDocument={handleValidateDocument}
-              onUpload={() => setShowUploadModal(true)}
-            />
-          )}
-
-          {activeTab === 'leaders' && <LeadersTab leaders={associationLeaders} />}
-
-          {activeTab === 'history' && <HistoryTab associationId={association.id} />}
         </div>
       </div>
 
       {/* Validation Modal */}
       {showValidationModal && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
-            <h2 className="text-gray-900 mb-4">Validation du document</h2>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}
+        >
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Validation du document</h2>
 
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Document</div>
-              <div className="text-gray-900">{selectedDocument.fileName}</div>
+              <div className="font-semibold text-gray-900">{selectedDocument.nom_fichier.split('/').pop()}</div>
               <div className="text-sm text-gray-600 mt-2">
-                Type : {DOCUMENT_TYPES[selectedDocument.type as DocumentType].label}
+                Type : {selectedDocument.type_document_name || 'Non spécifié'}
+              </div>
+              <div className="text-sm text-gray-600">
+                Déposé le {new Date(selectedDocument.date_depot).toLocaleDateString('fr-FR')}
               </div>
             </div>
 
@@ -243,7 +506,7 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
               </button>
 
               <div className="border-t border-gray-200 pt-4">
-                <label className="block text-gray-700 mb-2">Ou refuser avec un motif :</label>
+                <label className="block text-gray-700 font-medium mb-2">Ou refuser avec un motif :</label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
@@ -262,14 +525,48 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
               </div>
             </div>
 
-            <button
-              onClick={() => setShowValidationModal(false)}
-              className="w-full mt-4 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              Annuler
-            </button>
+            <div className="h-6" />
+            <div className="flex gap-4 mt-2">
+              <button
+                onClick={() => {
+                  setShowValidationModal(false);
+                  setRejectionReason('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleApproveDocument}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Valider
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <UploadDocumentModal
+          associationId={association.id_association || association.id}
+          onClose={() => setShowUploadModal(false)}
+          onSuccess={reloadDocuments}
+          onDataChanged={onDataChanged}
+        />
+      )}
+
+      {/* Edit Association Modal */}
+      {showEditModal && (
+        <EditAssociationModal
+          association={displayAssociation}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );
@@ -277,94 +574,131 @@ export function AssociationDetailView({ association, onBack }: AssociationDetail
 
 // Sub-components for each tab
 
-function OverviewTab({ association, documents, leaders }: any) {
-  const requiredDocs = Object.keys(DOCUMENT_TYPES) as DocumentType[];
-  const documentStatus = requiredDocs.map((type) => {
-    const doc = documents.find((d: any) => d.type === type);
-    return {
-      type,
-      label: DOCUMENT_TYPES[type].label,
-      status: doc ? doc.status : 'missing',
-      doc,
-    };
-  });
+interface OverviewTabProps {
+  association: any;
+  documents: DocumentData[];
+  members: MembreData[];
+  documentTypes: any[];
+  stats: {
+    total: number;
+    validated: number;
+    pending: number;
+    rejected: number;
+    expired: number;
+  };
+  completionRate: number;
+}
 
-  const president = leaders.find((l: any) => l.role === 'president');
+function OverviewTab({ association, documents, members, documentTypes, stats, completionRate }: OverviewTabProps) {
+  const president = members.find((m) => m.statut_membre === 'president');
 
   return (
     <div className="space-y-6">
       {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-          <div className="text-sm text-green-700 mb-1">Documents validés</div>
-          <div className="text-green-900">
-            {documents.filter((d: any) => d.status === 'validated').length} / {requiredDocs.length}
-          </div>
+          <div className="text-sm text-green-700 font-medium mb-1">Documents validés</div>
+          <div className="text-2xl font-bold text-green-900">{stats.validated}</div>
+          <div className="text-xs text-green-600 mt-1">sur {stats.total} requis</div>
         </div>
-        <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-          <div className="text-sm text-orange-700 mb-1">En attente</div>
-          <div className="text-orange-900">
-            {documents.filter((d: any) => d.status === 'pending').length}
-          </div>
+        <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+          <div className="text-sm text-yellow-700 font-medium mb-1">En attente</div>
+          <div className="text-2xl font-bold text-yellow-900">{stats.pending}</div>
+          <div className="text-xs text-yellow-600 mt-1">À traiter</div>
         </div>
         <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-          <div className="text-sm text-red-700 mb-1">Action requise</div>
-          <div className="text-red-900">
-            {documents.filter((d: any) => d.status === 'rejected' || d.status === 'expired').length}
-          </div>
+          <div className="text-sm text-red-700 font-medium mb-1">Refusés</div>
+          <div className="text-2xl font-bold text-red-900">{stats.rejected}</div>
+          <div className="text-xs text-red-600 mt-1">À corriger</div>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+          <div className="text-sm text-purple-700 font-medium mb-1">Taux complet</div>
+          <div className="text-2xl font-bold text-purple-900">{completionRate}%</div>
+          <div className="text-xs text-purple-600 mt-1">Dossier</div>
         </div>
       </div>
 
       {/* President info */}
       {president && (
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <div className="flex items-center gap-2 text-blue-900 mb-2">
-            <Users className="w-4 h-4" />
-            <span>Président·e actuel·le</span>
+          <div className="flex items-center gap-2 text-blue-900 mb-3">
+            <Users className="w-5 h-5" />
+            <span className="font-semibold">Responsable actuel·le</span>
           </div>
-          <div className="text-blue-900">
-            {president.firstName} {president.lastName}
+          <div className="text-blue-900 font-semibold">
+            {president.prenom} {president.nom}
           </div>
           <div className="text-sm text-blue-700">{president.email}</div>
+          {president.tel && <div className="text-sm text-blue-700">{president.tel}</div>}
           <div className="text-sm text-blue-700">
-            En fonction depuis le {new Date(president.startDate).toLocaleDateString('fr-FR')}
+            Depuis le {new Date(president.date_adhesion).toLocaleDateString('fr-FR')}
           </div>
         </div>
       )}
 
-      {/* Document checklist */}
+      {/* Document checklist - affiche TOUS les types de documents */}
       <div>
-        <h3 className="text-gray-900 mb-4">État des documents requis</h3>
+        <h3 className="text-gray-900 font-semibold mb-4">État de tous les documents</h3>
         <div className="space-y-2">
-          {documentStatus.map((item) => (
-            <div
-              key={item.type}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <DocumentStatusBadge status={item.status} />
-                <span className="text-gray-900">{item.label}</span>
-              </div>
-              {item.doc && (
-                <div className="text-sm text-gray-600">
-                  Déposé le {new Date(item.doc.uploadedAt).toLocaleDateString('fr-FR')}
+          {documentTypes.map((type: any) => {
+            const doc = documents.find(d => d.type_document_name?.toLowerCase() === type.libelle.toLowerCase());
+            const status = doc?.statut || 'missing';
+            
+            return (
+              <div
+                key={type.id_type_document}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <DocumentStatusBadge status={status as DocumentStatus} />
+                  <span className="text-gray-900 font-medium">
+                    {type.libelle}
+                    {type.obligatoire && <span className="ml-2 text-xs text-red-600 font-semibold">*</span>}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
+                {doc && (
+                  <div className="text-sm text-gray-600">
+                    Déposé le {new Date(doc.date_depot).toLocaleDateString('fr-FR')}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="text-xs text-gray-500 mt-2">
+          * Document obligatoire
         </div>
       </div>
     </div>
   );
 }
 
-function DocumentsTab({ documents, onValidateDocument, onUpload }: any) {
+interface DocumentsTabProps {
+  documents: DocumentData[];
+  onValidateDocument: (doc: DocumentData) => void;
+  onDownloadDocument: (doc: DocumentData) => void;
+  onPreviewDocument: (doc: DocumentData) => void;
+  onUploadClick: () => void;
+  editingDocStatus: number | null;
+  onEditStatus: (docId: number | null) => void;
+  onUpdateStatus: (docId: number, status: string) => void;
+  updatingStatus: boolean;
+}
+
+function DocumentsTab({ documents, onValidateDocument, onDownloadDocument, onPreviewDocument, onUploadClick, editingDocStatus, onEditStatus, onUpdateStatus, updatingStatus }: DocumentsTabProps) {
+  const statusOptions = [
+    { value: 'draft', label: 'Brouillon' },
+    { value: 'submitted', label: 'Soumis' },
+    { value: 'approved', label: 'Approuvé' },
+    { value: 'rejected', label: 'Rejeté' },
+    { value: 'expired', label: 'Expiré' },
+  ];
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-gray-900">Gestion des documents</h3>
-        <button
-          onClick={onUpload}
+        <h3 className="text-lg font-semibold text-gray-900">Gestion des documents</h3>
+        <button 
+          onClick={onUploadClick}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
         >
           <Upload className="w-4 h-4" />
@@ -379,39 +713,83 @@ function DocumentsTab({ documents, onValidateDocument, onUpload }: any) {
         </div>
       ) : (
         <div className="space-y-2">
-          {documents.map((doc: any) => (
+          {documents.map((doc) => (
             <div
-              key={doc.id}
+              key={doc.id_document}
               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <div className="flex items-center gap-4 flex-1">
-                <DocumentStatusBadge status={doc.status} />
+                {editingDocStatus === doc.id_document ? (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={doc.statut}
+                      onChange={(e) => onUpdateStatus(doc.id_document, e.target.value)}
+                      disabled={updatingStatus}
+                      className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      {statusOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => onEditStatus(null)}
+                      disabled={updatingStatus}
+                      className="p-1 text-gray-600 hover:bg-white rounded transition-colors"
+                      title="Annuler"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <DocumentStatusBadge status={doc.statut as DocumentStatus} />
+                    <button
+                      onClick={() => onEditStatus(doc.id_document)}
+                      className="p-1 text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                      title="Modifier le statut"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex-1">
-                  <div className="text-gray-900">{doc.fileName}</div>
+                  <div className="text-gray-900 font-medium">{doc.nom_fichier.split('/').pop()}</div>
                   <div className="text-sm text-gray-600">
-                    {DOCUMENT_TYPES[doc.type as DocumentType].label}
+                    {doc.type_document_name}
                   </div>
                   <div className="text-sm text-gray-500">
-                    Déposé le {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')} par {doc.uploadedBy}
+                    Déposé le {new Date(doc.date_depot).toLocaleDateString('fr-FR')} par {doc.uploaded_by_email}
                   </div>
-                  {doc.rejectionReason && (
+                  {doc.commentaire_refus && (
                     <div className="text-sm text-red-600 mt-1">
-                      Motif de refus : {doc.rejectionReason}
+                      Motif de refus : {doc.commentaire_refus}
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <button className="p-2 text-gray-600 hover:bg-white rounded-lg transition-colors">
+                <button 
+                  onClick={() => onPreviewDocument(doc)}
+                  className="p-2 text-gray-600 hover:bg-white rounded-lg transition-colors"
+                  aria-label="Prévisualiser"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => onDownloadDocument(doc)}
+                  className="p-2 text-gray-600 hover:bg-white rounded-lg transition-colors"
+                >
                   <Download className="w-4 h-4" />
                 </button>
-                {doc.status === 'pending' && (
+                {doc.statut === 'submitted' && (
                   <button
                     onClick={() => onValidateDocument(doc)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
                   >
-                    Valider / Refuser
+                    Traiter
                   </button>
                 )}
               </div>
@@ -423,49 +801,125 @@ function DocumentsTab({ documents, onValidateDocument, onUpload }: any) {
   );
 }
 
-function LeadersTab({ leaders }: any) {
-  const roleLabels = {
-    president: 'Président·e',
-    treasurer: 'Trésorier·e',
-    secretary: 'Secrétaire',
-    member: 'Membre',
+interface LeadersTabProps {
+  associationId: number;
+}
+
+function LeadersTab({ associationId }: LeadersTabProps) {
+  const [mandats, setMandats] = useState<MandatData[]>([]);
+  const [roleTypes, setRoleTypes] = useState<RoleTypeData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showAddMandatForm, setShowAddMandatForm] = useState(false);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Charger les mandats et les types de rôles
+        const mandatsResponse = await API.getAssociationMandats(associationId);
+        const mandatsArray = Array.isArray(mandatsResponse) ? mandatsResponse : mandatsResponse?.results || [];
+        setMandats(mandatsArray);
+
+        const roleTypesResponse = await API.getRoleTypes();
+        const roleTypesArray = Array.isArray(roleTypesResponse) ? roleTypesResponse : roleTypesResponse?.results || [];
+        setRoleTypes(roleTypesArray);
+      } catch (err) {
+        console.error('Erreur lors du chargement des mandats:', err);
+        setError('Erreur lors du chargement des mandats');
+        setMandats([]);
+        setRoleTypes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [associationId]);
+
+  const activeMandats = mandats.filter(m => m.statut === 'active');
+
+  const getRoleTypeName = (roleTypeId: number) => {
+    const roleType = roleTypes.find(rt => rt.id === roleTypeId);
+    return roleType?.name || 'Rôle inconnu';
   };
+
+  const handleDeleteMandat = async (mandatId: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce mandat ?')) {
+      try {
+        await API.deleteMandat(mandatId);
+        setMandats(mandats.filter(m => m.id_mandat !== mandatId));
+      } catch (err) {
+        console.error('Erreur lors de la suppression du mandat:', err);
+        setError('Erreur lors de la suppression du mandat');
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="text-gray-600 mt-4">Chargement des mandats...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-gray-900">Bureau de l'association</h3>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+        <h3 className="text-lg font-semibold text-gray-900">Bureau et mandats</h3>
+        <button
+          onClick={() => setShowAddMandatForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+        >
           <Plus className="w-4 h-4" />
-          Ajouter un dirigeant
+          Ajouter un mandat
         </button>
       </div>
 
-      {leaders.length === 0 ? (
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
+
+      {activeMandats.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600">Aucun dirigeant déclaré</p>
+          <p className="text-gray-600">Aucun mandat actif déclaré</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {leaders.map((leader: any) => (
+          {activeMandats.map((mandat) => (
             <div
-              key={leader.id}
+              key={mandat.id_mandat}
               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-4 flex-1">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <Users className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <div className="text-gray-900">
-                    {leader.firstName} {leader.lastName}
+                  <div className="text-gray-900 font-medium">
+                    {mandat.membre_detail?.prenom} {mandat.membre_detail?.nom || 'Membre'}
                   </div>
-                  <div className="text-sm text-gray-600">{roleLabels[leader.role as keyof typeof roleLabels]}</div>
-                  <div className="text-sm text-gray-500">{leader.email}</div>
-                  {leader.phone && <div className="text-sm text-gray-500">{leader.phone}</div>}
+                  <div className="text-sm text-gray-600 font-semibold">{getRoleTypeName(mandat.role_type)}</div>
+                  {mandat.membre_detail?.email && (
+                    <div className="text-sm text-gray-500">{mandat.membre_detail.email}</div>
+                  )}
                   <div className="text-sm text-gray-500">
-                    En fonction depuis le {new Date(leader.startDate).toLocaleDateString('fr-FR')}
+                    Depuis le {new Date(mandat.date_debut).toLocaleDateString('fr-FR')}
+                    {mandat.date_fin && ` • Jusqu'au ${new Date(mandat.date_fin).toLocaleDateString('fr-FR')}`}
+                  </div>
+                  <div className={`text-xs mt-1 px-2 py-1 rounded inline-block ${
+                    mandat.statut === 'active' ? 'bg-green-100 text-green-700' :
+                    mandat.statut === 'termine' ? 'bg-gray-100 text-gray-700' :
+                    'bg-orange-100 text-orange-700'
+                  }`}>
+                    {mandat.statut === 'active' ? 'Actif' : mandat.statut === 'termine' ? 'Terminé' : 'Suspendu'}
                   </div>
                 </div>
               </div>
@@ -474,7 +928,10 @@ function LeadersTab({ leaders }: any) {
                 <button className="p-2 text-gray-600 hover:bg-white rounded-lg transition-colors">
                   <Edit2 className="w-4 h-4" />
                 </button>
-                <button className="p-2 text-red-600 hover:bg-white rounded-lg transition-colors">
+                <button
+                  onClick={() => handleDeleteMandat(mandat.id_mandat)}
+                  className="p-2 text-red-600 hover:bg-white rounded-lg transition-colors"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -482,55 +939,408 @@ function LeadersTab({ leaders }: any) {
           ))}
         </div>
       )}
+
+      {/* Mandats terminés */}
+      {mandats.filter(m => m.statut === 'termine').length > 0 && (
+        <div className="mt-8">
+          <h4 className="text-gray-900 font-semibold mb-3">Mandats précédents</h4>
+          <div className="space-y-2">
+            {mandats.filter(m => m.statut === 'termine').map((mandat) => (
+              <div
+                key={mandat.id_mandat}
+                className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-600"
+              >
+                <span className="font-medium">{mandat.membre_detail?.prenom} {mandat.membre_detail?.nom || 'Membre'}</span>
+                {' • '}
+                <span>{getRoleTypeName(mandat.role_type)}</span>
+                {' • '}
+                <span>
+                  {new Date(mandat.date_debut).toLocaleDateString('fr-FR')}
+                  {mandat.date_fin && ` - ${new Date(mandat.date_fin).toLocaleDateString('fr-FR')}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function HistoryTab({ associationId }: any) {
-  const mockHistory = [
-    {
-      id: '1',
-      date: '2024-12-20T16:45:00',
-      action: 'Document déposé',
-      details: 'Charte universitaire 2024.pdf',
-      user: 'Thomas Leroy',
-    },
-    {
-      id: '2',
-      date: '2024-09-15T14:30:00',
-      action: 'Document refusé',
-      details: 'PV AG 2024.pdf - Document non signé',
-      user: 'Marie Goupille Bergère',
-    },
-    {
-      id: '3',
-      date: '2024-01-22T09:10:00',
-      action: 'Document validé',
-      details: 'Liste bureau 2024.pdf',
-      user: 'Marie Goupille Bergère',
-    },
-  ];
+
+// Modal pour l'upload de documents
+interface UploadDocumentModalProps {
+  associationId: number;
+  onClose: () => void;
+  onSuccess: () => void;
+  onDataChanged?: () => void;
+}
+
+function UploadDocumentModal({ associationId, onClose, onSuccess, onDataChanged }: UploadDocumentModalProps) {
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedType, setSelectedType] = useState('');
+  const [dateEmission, setDateEmission] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadDocumentTypes = async () => {
+      try {
+        const response = await API.getDocumentTypes();
+        const types = Array.isArray(response) ? response : response?.results || [];
+        setDocumentTypes(types);
+      } catch (err) {
+        console.error('Error loading document types:', err);
+        setError('Erreur lors du chargement des types de documents');
+      }
+    };
+
+    loadDocumentTypes();
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setError('');
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !selectedType || !dateEmission) {
+      setError('Veuillez remplir tous les champs requis');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError('');
+
+      const formData = new FormData();
+      formData.append('nom_fichier', selectedFile);
+      formData.append('id_association', associationId.toString());
+      formData.append('id_type_document', selectedType);
+      formData.append('date_emission', dateEmission);
+
+      await API.uploadDocument(formData);
+      onSuccess();
+      onClose();
+      onDataChanged?.();
+    } catch (err) {
+      console.error('Error uploading document:', err);
+      setError('Erreur lors de l\'upload du document');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-gray-900">Historique des actions</h3>
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
+      <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Importer un document</h2>
 
-      <div className="space-y-3">
-        {mockHistory.map((entry) => (
-          <div key={entry.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Clock className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <div className="text-gray-900">{entry.action}</div>
-              <div className="text-sm text-gray-600">{entry.details}</div>
-              <div className="text-sm text-gray-500 mt-1">
-                Par {entry.user} • {new Date(entry.date).toLocaleDateString('fr-FR')} à{' '}
-                {new Date(entry.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type de document <span className="text-red-500">*</span></label>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Sélectionner un type</option>
+              {documentTypes.map((type) => (
+                <option key={type.id_type_document} value={type.id_type_document}>
+                  {type.libelle}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date d'émission <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              value={dateEmission}
+              onChange={(e) => setDateEmission(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Fichier <span className="text-red-500">*</span></label>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              accept=".pdf"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {selectedFile && (
+              <p className="text-sm text-gray-600 mt-2">
+                Fichier sélectionné : {selectedFile.name}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="h-6" />
+        <div className="flex gap-4 mt-6">
+          <button
+            onClick={onClose}
+            disabled={uploading}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleUpload}
+            disabled={!selectedFile || !selectedType || !dateEmission || uploading}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {uploading ? 'Envoi en cours...' : 'Importer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal pour modifier l'association
+interface EditAssociationModalProps {
+  association: any;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function EditAssociationModal({ association, onClose, onSuccess }: EditAssociationModalProps) {
+  const [formData, setFormData] = useState({
+    nom_association: association.nom_association || '',
+    ufr: association.ufr || '',
+    email_contact: association.email_contact || '',
+    tel_contact: association.tel_contact || '',
+    num_siret: association.num_siret || '',
+    insta_contact: association.insta_contact || '',
+    desc_association: association.desc_association || '',
+    statut: association.statut || 'active',
+    association_type: association.association_type || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [associationTypes, setAssociationTypes] = useState<any[]>([]);
+  const [associationTypeFilter, setAssociationTypeFilter] = useState('');
+
+  useEffect(() => {
+    const loadAssociationTypes = async () => {
+      try {
+        const data = await API.getAssociationTypes();
+        const typesArray = Array.isArray(data) ? data : (data?.results || []);
+        setAssociationTypes(typesArray);
+      } catch (err) {
+        console.error('Error loading association types:', err);
+      }
+    };
+    loadAssociationTypes();
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setSaving(true);
+      setError('');
+
+      await API.updateAssociation(association.id_association || association.id, formData);
+      onSuccess();
+    } catch (err) {
+      console.error('Error updating association:', err);
+      setError('Erreur lors de la mise à jour de l\'association');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
+      <div className="bg-white rounded-lg shadow-lg p-6 max-w-lg w-full my-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Modifier l'association</h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom de l'association <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="nom_association"
+                  value={formData.nom_association}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nom de l'association"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">UFR</label>
+                <input
+                  type="text"
+                  name="ufr"
+                  value={formData.ufr}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="UFR Sciences"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                <select
+                  name="statut"
+                  value={formData.statut}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspendue</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type d'association</label>
+                <input
+                  type="text"
+                  placeholder="Chercher un type..."
+                  value={associationTypeFilter}
+                  onChange={(e) => setAssociationTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"
+                />
+                <select
+                  name="association_type"
+                  value={formData.association_type}
+                  onChange={(e) => {
+                    handleChange(e);
+                    const selected = associationTypes.find((t: any) => t.id.toString() === e.target.value);
+                    if (selected) {
+                      setAssociationTypeFilter(selected.name);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  size={5}
+                >
+                  <option value="">-- Sélectionner un type --</option>
+                  {associationTypes
+                    .filter((type: any) => type.name.toLowerCase().includes(associationTypeFilter.toLowerCase()))
+                    .map((type: any) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email de contact</label>
+                <input
+                  type="email"
+                  name="email_contact"
+                  value={formData.email_contact}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="contact@association.fr"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                <input
+                  type="tel"
+                  name="tel_contact"
+                  value={formData.tel_contact}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="01234567890"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">SIRET</label>
+                <input
+                  type="text"
+                  name="num_siret"
+                  value={formData.num_siret}
+                  onChange={handleChange}
+                  maxLength={14}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="12345678901234"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Instagram</label>
+                <input
+                  type="text"
+                  name="insta_contact"
+                  value={formData.insta_contact}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="@association"
+                />
+              </div>
+
+              <div className="col-span-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  name="desc_association"
+                  value={formData.desc_association}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Description de l'association"
+                />
               </div>
             </div>
           </div>
-        ))}
+
+          <div className="h-6" />
+          <div className="flex gap-4 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
