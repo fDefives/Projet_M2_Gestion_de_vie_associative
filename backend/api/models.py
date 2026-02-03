@@ -119,7 +119,8 @@ class TypeDocument(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expire_si_changement_president = models.BooleanField(
         default=False,
-        help_text="Si vrai, le document expire automatiquement lors du changement de président"
+        help_text="Si vrai, le document expire automatiquement lors "
+                  "du changement de président"
     )
 
     class Meta:

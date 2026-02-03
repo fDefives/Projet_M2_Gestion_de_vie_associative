@@ -86,7 +86,8 @@ class UserRegistrationView(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
-        detail=False, methods=["get", "patch"], permission_classes=[permissions.IsAuthenticated]
+        detail=False, methods=["get", "patch"],
+        permission_classes=[permissions.IsAuthenticated]
     )
     def me(self, request):
         """
@@ -865,7 +866,6 @@ class MandatViewSet(viewsets.ModelViewSet):
             ).update(
                 statut="expired"
             )
-
 
     @action(
         detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated]
