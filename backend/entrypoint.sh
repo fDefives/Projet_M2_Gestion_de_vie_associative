@@ -51,8 +51,12 @@ else
   echo "Applying migrations..."
   python manage.py migrate --noinput
 
-  echo "Initializing test data..."
-  python manage.py init_db || true
+  if [ "${DEBUG:-False}" = "True" ]; then
+    echo "Initializing test data..."
+    python manage.py init_db || true
+  else
+    echo "DEBUG is False. Skipping init_db."
+  fi
 fi
 
 echo "Starting server..."

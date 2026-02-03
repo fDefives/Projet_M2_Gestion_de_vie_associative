@@ -60,7 +60,7 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 ).split(",")
 
 # Security settings for production
-SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "False") == "True"
+SECURE_SSL_REDIRECT = False  # Géré par nginx
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
