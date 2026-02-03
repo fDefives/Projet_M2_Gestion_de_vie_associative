@@ -11,6 +11,9 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.conf import settings
+from django.utils import timezone
+from django.db import models
+from datetime import timedelta
 import os
 
 from .models import (
@@ -612,12 +615,156 @@ class NotificationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
 
+    def _ensure_expiration_notifications(self, associations):
+        """Crée des notifications pour les documents expirant bientôt"""
+        today = timezone.now().date()
+        warning_limit = today + timedelta(days=60)
+
+        documents = (
+            Document.objects.filter(
+                id_association__in=associations,
+                date_expiration__isnull=False,
+                date_expiration__gt=today,
+                date_expiration__lte=warning_limit,
+                statut__in=["approved", "submitted"],
+            )
+            .select_related("id_type_document", "id_association")
+        )
+
+        for doc in documents:
+            if not doc.id_type_document:
+                continue
+            replacement_exists = Document.objects.filter(
+                id_association=doc.id_association,
+                id_type_document=doc.id_type_document,
+                statut__in=["submitted", "approved"],
+                date_depot__gt=doc.date_depot,
+            ).exists()
+
+            expiration_str = doc.date_expiration.strftime("%d/%m/%Y")
+            subject = (
+                f"Document à renouveler - {doc.id_association.nom_association}"
+            )
+            message = (
+                f"Le document {doc.id_type_document.libelle} (ID {doc.id_document}) "
+                f"expire le {expiration_str}. Merci de le renouveler."
+            )
+
+            if replacement_exists:
+                Notification.objects.filter(
+                    id_association=doc.id_association,
+                    message__icontains=f"ID {doc.id_document}",
+                ).update(is_read=True)
+                continue
+
+            notification, created = Notification.objects.get_or_create(
+                id_association=doc.id_association,
+                sujet=subject,
+                message=message,
+                defaults={"type": "warning", "is_read": False},
+            )
+            if not created and notification.is_read:
+                notification.is_read = False
+                notification.save(update_fields=["is_read"])
+
+    def _ensure_president_notifications(self, associations):
+        """Crée des notifications pour les associations sans président"""
+        today = timezone.now().date()
+
+        for association in associations:
+            # Chercher le rôle "Président" exactement
+            try:
+                president_role = RoleType.objects.get(name="Président")
+                has_active_president = Mandat.objects.filter(
+                    association=association,
+                    statut="active",
+                    role_type=president_role,
+                    date_debut__lte=today,
+                ).filter(
+                    models.Q(date_fin__isnull=True) | models.Q(date_fin__gte=today)
+                ).exists()
+            except RoleType.DoesNotExist:
+                has_active_president = False
+
+            subject = f"Président manquant - {association.nom_association}"
+            message = (
+                f"L'association {association.nom_association} n'a pas de président actif. "
+                f"Merci d'ajouter un président."
+            )
+
+            if not has_active_president:
+                notification, created = Notification.objects.get_or_create(
+                    id_association=association,
+                    sujet=subject,
+                    message=message,
+                    defaults={"type": "error", "is_read": False},
+                )
+                if not created and notification.is_read:
+                    notification.is_read = False
+                    notification.save(update_fields=["is_read"])
+            else:
+                Notification.objects.filter(
+                    id_association=association,
+                    sujet=subject,
+                ).update(is_read=True)
+
+    def _ensure_mandatory_documents_notifications(self, associations):
+        """Crée des notifications pour les documents obligatoires manquants"""
+        today = timezone.now().date()
+
+        # Récupérer tous les types de documents obligatoires
+        mandatory_types = TypeDocument.objects.filter(obligatoire=True)
+
+        for association in associations:
+            for doc_type in mandatory_types:
+                # Vérifier si un document valide de ce type existe
+                has_valid_document = Document.objects.filter(
+                    id_association=association,
+                    id_type_document=doc_type,
+                    statut__in=["submitted", "approved"],
+                ).filter(
+                    models.Q(date_expiration__isnull=True) | models.Q(date_expiration__gte=today)
+                ).exists()
+
+                subject = f"Document obligatoire manquant - {association.nom_association}"
+                message = (
+                    f"L'association {association.nom_association} n'a pas déposé le document obligatoire "
+                    f"\"{doc_type.libelle}\". Merci de le déposer dès que possible."
+                )
+
+                if not has_valid_document:
+                    # Créer ou réactiver la notification
+                    notification, created = Notification.objects.get_or_create(
+                        id_association=association,
+                        sujet=subject,
+                        message=message,
+                        defaults={"type": "warning", "is_read": False},
+                    )
+                    if not created and notification.is_read:
+                        notification.is_read = False
+                        notification.save(update_fields=["is_read"])
+                else:
+                    # Marquer comme lu si le document a été déposé
+                    Notification.objects.filter(
+                        id_association=association,
+                        sujet=subject,
+                        message__icontains=doc_type.libelle,
+                    ).update(is_read=True)
+
     def get_queryset(self):
         """Filtre les notifications selon le rôle"""
         user = self.request.user
         if user.is_staff:
+            associations = Association.objects.all()
+            self._ensure_expiration_notifications(associations)
+            self._ensure_president_notifications(associations)
+            self._ensure_mandatory_documents_notifications(associations)
             return Notification.objects.all()
         # Les utilisateurs ne voient que les notifications de leur association
+        associations = Association.objects.filter(id_utilisateur=user)
+        self._ensure_expiration_notifications(associations)
+        self._ensure_president_notifications(associations)
+        self._ensure_mandatory_documents_notifications(associations)
         return Notification.objects.filter(id_association__id_utilisateur=user)
 
     @action(

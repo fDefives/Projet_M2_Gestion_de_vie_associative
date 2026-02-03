@@ -1,27 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Mail,
   Phone,
   Building2,
-  FileText,
-  Download,
-  Search,
   Check,
   X,
   Clock,
-  AlertCircle,
   Edit2,
-  Plus,
-  Users,
-  Trash2,
 } from 'lucide-react';
-import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
 import * as API from '../../api';
 import { MandatsManager } from './MandatsManager';
 import { OverviewTab } from './tabs/OverviewTab';
 import { DocumentsTab } from './tabs/DocumentsTab';
-import { LeadersTab } from './tabs/LeadersTab';
 import { UploadDocumentModal } from './modals/UploadDocumentModal';
 import { EditAssociationModal } from './modals/EditAssociationModal';
 
@@ -48,7 +39,6 @@ interface MembreData {
   date_fin_adhesion: string;
 }
 
-type DocumentStatus = 'submitted' | 'approved' | 'rejected' | 'expired' | 'draft' | 'missing';
 type TabType = 'overview' | 'documents' | 'leaders';
 
 interface AssociationDetailViewProps {
@@ -65,6 +55,7 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
   const [rejectionReason, setRejectionReason] = useState('');
   const [associationDocs, setAssociationDocs] = useState<DocumentData[]>([]);
   const [associationMembers, setAssociationMembers] = useState<MembreData[]>([]);
+  const [activeMembersCount, setActiveMembersCount] = useState(0);
   const [editingDocStatus, setEditingDocStatus] = useState<number | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [associationDetails, setAssociationDetails] = useState<any>(association);
@@ -87,6 +78,26 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
     }
   };
 
+  const loadActiveMembersCount = async (id: number) => {
+    try {
+      const mandatsResponse = await API.getAssociationMandats(id);
+      const mandatsArray = Array.isArray(mandatsResponse)
+        ? mandatsResponse
+        : mandatsResponse?.results || [];
+      const today = new Date();
+      const activeMandats = mandatsArray.filter((m: any) => {
+        if (m.statut !== 'active') return false;
+        if (!m.date_fin) return true;
+        return new Date(m.date_fin) >= today;
+      });
+      const uniqueMembers = new Set(activeMandats.map((m: any) => m.membre));
+      setActiveMembersCount(uniqueMembers.size);
+    } catch (err) {
+      console.error('Error loading active members count:', err);
+      setActiveMembersCount(0);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -105,6 +116,7 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
         setDocumentTypes(Array.isArray(typesData) ? typesData : typesData?.results || []);
 
         await loadMembers(associationId);
+        await loadActiveMembersCount(associationId);
       } catch (err) {
         console.error('Error loading association data:', err);
         setError('Erreur lors du chargement des données');
@@ -364,7 +376,7 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              Membres ({associationMembers.length})
+              Membres ({activeMembersCount})
             </button>
           </div>
         </div>
@@ -411,6 +423,7 @@ export function AssociationDetailView({ association, onBack, onDataChanged }: As
                   associationId={associationId}
                   onDataChanged={async () => {
                     await loadMembers(associationId);
+                    await loadActiveMembersCount(associationId);
                     onDataChanged?.();
                   }}
                 />

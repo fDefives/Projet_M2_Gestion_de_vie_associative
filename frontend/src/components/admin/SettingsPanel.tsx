@@ -153,14 +153,20 @@ interface DocumentTypesSectionProps {
 
 function DocumentTypesSection({ types, onRefresh, onAdd }: DocumentTypesSectionProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState({ libelle: '', obligatoire: false, duree_validite_mois: null as number | null });
+  const [editData, setEditData] = useState({ 
+    libelle: '', 
+    obligatoire: false, 
+    duree_validite_mois: null as number | null,
+    expire_si_changement_president: false
+  });
 
   const handleEdit = (type: any) => {
     setEditingId(type.id_type_document);
     setEditData({ 
       libelle: type.libelle, 
       obligatoire: type.obligatoire || false,
-      duree_validite_mois: type.duree_validite_mois || null
+      duree_validite_mois: type.duree_validite_mois || null,
+      expire_si_changement_president: type.expire_si_changement_president || false
     });
   };
 
@@ -241,6 +247,15 @@ function DocumentTypesSection({ types, onRefresh, onAdd }: DocumentTypesSectionP
                     />
                     Obligatoire
                   </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={editData.expire_si_changement_president}
+                      onChange={(e) => setEditData({ ...editData, expire_si_changement_president: e.target.checked })}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    Expire au changement de président
+                  </label>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleSave(type.id_type_document)}
@@ -264,14 +279,21 @@ function DocumentTypesSection({ types, onRefresh, onAdd }: DocumentTypesSectionP
                     <FileText className="w-5 h-5 text-blue-600" />
                     <div>
                       <div className="font-medium text-gray-900">{type.libelle}</div>
-                      <div className="text-sm text-gray-600">
-                        {type.obligatoire ? (
-                          <span className="text-red-600 font-medium">Obligatoire</span>
-                        ) : (
-                          <span className="text-gray-500">Optionnel</span>
-                        )}
-                        {type.duree_validite_mois && (
-                          <span className="ml-2 text-blue-600">• Validité: {type.duree_validite_mois} mois</span>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <div>
+                          {type.obligatoire ? (
+                            <span className="text-red-600 font-medium">Obligatoire</span>
+                          ) : (
+                            <span className="text-gray-500">Optionnel</span>
+                          )}
+                          {type.duree_validite_mois && (
+                            <span className="ml-2 text-blue-600">• Validité: {type.duree_validite_mois} mois</span>
+                          )}
+                        </div>
+                        {type.expire_si_changement_president && (
+                          <div className="text-orange-600 font-medium">
+                            ⚠️ Expire au changement de président
+                          </div>
                         )}
                       </div>
                     </div>

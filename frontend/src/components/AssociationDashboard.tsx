@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { LogOut, FileText, AlertCircle, CheckCircle2, Clock, Download, Edit2, Search, Building2, Mail, Phone, Instagram, Upload, Settings } from 'lucide-react';
 import { User } from '../App';
 import { DocumentStatusBadge } from './shared/DocumentStatusBadge';
 import { MandatsManager } from './admin/MandatsManager';
+import { PresidentChangeAlerts } from './admin/PresidentChangeAlerts';
 import { UserUploadDocumentModal } from './shared/modals/UserUploadDocumentModal';
 import { UserEditAssociationModal } from './shared/modals/UserEditAssociationModal';
 import { UserSettingsModal } from './shared/modals/UserSettingsModal';
@@ -168,6 +169,9 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="mb-6">
+          <PresidentChangeAlerts />
+        </div>
         {(() => {
           // Trouver les types de documents obligatoires
           const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);

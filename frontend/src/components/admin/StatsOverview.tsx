@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2, Clock, Users, AlertTriangle, Check, X, Search } from 'lucide-react';
 import { DocumentStatusBadge } from '../shared/DocumentStatusBadge';
+import { PresidentChangeAlerts } from './PresidentChangeAlerts';
 import * as API from '../../api';
 
 interface Association {
@@ -186,6 +187,8 @@ export function StatsOverview({ onSelectAssociation, refreshKey = 0 }: StatsOver
 
   return (
     <div className="space-y-6">
+      <PresidentChangeAlerts />
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-2">

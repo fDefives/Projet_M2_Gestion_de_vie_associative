@@ -47,7 +47,7 @@ class Association(models.Model):
     nom_association = models.CharField(max_length=255)
     date_creation_association = models.DateField(auto_now_add=True)
     num_siret = models.CharField(max_length=14, blank=True)
-    desc_association = models.TextField(blank=True)
+    desc_association = models.TextField(blank=True, null=True)
     ufr = models.CharField(max_length=100, blank=True)
     statut = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
     email_contact = models.EmailField(blank=True, null=True)

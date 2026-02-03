@@ -1,4 +1,3 @@
-import React from 'react';
 import { Upload, FileText, Search, Download, Edit2, X } from 'lucide-react';
 import { DocumentStatusBadge } from '../../shared/DocumentStatusBadge';
 
