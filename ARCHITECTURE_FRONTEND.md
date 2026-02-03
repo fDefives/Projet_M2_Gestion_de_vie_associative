@@ -6,69 +6,6 @@ Le frontend est une application React en TypeScript utilisant Vite comme bundler
 
 ## Structure du projet
 
-### Vue hiérarchique (Mermaid)
-
-```mermaid
-flowchart LR
-   src[frontend/src]
-
-   subgraph Core[Core]
-      App[App.tsx]
-      Main[main.tsx]
-      Api[api.js]
-      Hooks[hooks.js]
-      Css[index.css]
-   end
-
-   subgraph Components[components/]
-      Pages[Pages]
-      Admin[admin/]
-      Shared[shared/]
-      Figma[figma/]
-      Ui[ui/]
-   end
-
-   subgraph Styles[styles/]
-      Globals[globals.css]
-   end
-
-   src --> Core
-   src --> Components
-   src --> Styles
-
-   Pages --> Login[LoginPage.tsx]
-   Pages --> Reset[ResetPasswordPage.tsx]
-   Pages --> AdminDash[AdminDashboard.tsx]
-   Pages --> UserDash[AssociationDashboard.tsx]
-
-   Admin --> Detail[AssociationDetailView.tsx]
-   Admin --> AssocList[AssociationsList.tsx]
-   Admin --> DocsList[DocumentsList.tsx]
-   Admin --> Stats[StatsOverview.tsx]
-   Admin --> Mandats[MandatsManager.tsx]
-   Admin --> Settings[SettingsPanel.tsx]
-   Admin --> AdminTabs[tabs/]
-   Admin --> AdminModals[modals/]
-
-   AdminTabs --> OverviewTab[OverviewTab.tsx]
-   AdminTabs --> DocumentsTab[DocumentsTab.tsx]
-   AdminTabs --> LeadersTab[LeadersTab.tsx]
-
-   AdminModals --> UploadDoc[UploadDocumentModal.tsx]
-   AdminModals --> EditAssoc[EditAssociationModal.tsx]
-
-   Shared --> Badge[DocumentStatusBadge.tsx]
-   Shared --> SharedModals[modals/]
-   SharedModals --> UserUpload[UserUploadDocumentModal.tsx]
-   SharedModals --> UserEdit[UserEditAssociationModal.tsx]
-   SharedModals --> UserSettings[UserSettingsModal.tsx]
-
-   Figma --> Img[ImageWithFallback.tsx]
-   Ui --> Shadcn[[shadcn/ui components]]
-```
-
-### Vue détaillée (arborescence)
-
 ```
 frontend/src/
 ├── App.tsx                          # Point d'entrée principal (routing)
@@ -106,84 +43,74 @@ frontend/src/
 │   └── ui/
 │       └── [composants shadcn/ui]       # UI library (inputs, dialogs, etc.)
 └── styles/
-      └── globals.css                  # Styles Tailwind
+    └── globals.css                  # Styles Tailwind
 ```
 
 ## Architecture des composants
 
-### Hiérarchie de rendu (Mermaid)
+### Hiérarchie de rendu
 
-```mermaid
-flowchart TB
-   App[App.tsx]
-   Router[Router / Routes]
-   Login[LoginPage]
-   Admin[AdminDashboard]
-   UserDash[AssociationDashboard]
-
-   App --> Router
-   Router --> Login
-   Router --> Admin
-   Router --> UserDash
-
-   Admin --> Sidebar[Sidebar]
-   Admin --> Stats[StatsOverview]
-   Admin --> AssocList[AssociationsList]
-   AssocList --> Detail[AssociationDetailView]
-   Detail --> OverviewTab[OverviewTab]
-   Detail --> DocumentsTab[DocumentsTab]
-   Detail --> LeadersTab[LeadersTab]
-   Admin --> DocsList[DocumentsList]
-   Admin --> Settings[SettingsPanel]
-   Admin --> AdminModals[Modals Admin]
-   AdminModals --> UploadDoc[UploadDocumentModal]
-   AdminModals --> EditAssoc[EditAssociationModal]
-
-   UserDash --> Header[Header (email + settings)]
-   UserDash --> UserTabs[Tabs (overview, documents, leaders)]
-   UserDash --> UserModals[Modals User]
-   UserModals --> UserUpload[UserUploadDocumentModal]
-   UserModals --> UserEdit[UserEditAssociationModal]
-   UserModals --> UserSettings[UserSettingsModal]
+```
+App (App.tsx)
+│
+├─ Router / Routes
+│
+├─ LoginPage
+├─ AdminDashboard
+│   ├─ Sidebar
+│   ├─ StatsOverview
+│   ├─ AssociationsList
+│   │   └─ AssociationDetailView
+│   │       ├─ OverviewTab
+│   │       ├─ DocumentsTab
+│   │       └─ LeadersTab
+│   ├─ DocumentsList
+│   ├─ SettingsPanel
+│   └─ Modals
+│       ├─ UploadDocumentModal
+│       └─ EditAssociationModal
+│
+└─ AssociationDashboard
+    ├─ Header (email + settings)
+    ├─ Tabs (overview, documents, leaders)
+    └─ Modals
+        ├─ UserUploadDocumentModal
+        ├─ UserEditAssociationModal
+        └─ UserSettingsModal
 ```
 
-### Flux de données (Mermaid)
+### Flux de données
 
-```mermaid
-flowchart LR
-   UI[Composants UI] --> API[api.js (Axios)]
-   API --> Auth[Authentication]
-   API --> Assoc[Associations]
-   API --> Docs[Documents]
-   API --> Members[Membres]
-   API --> Mandats[Mandats]
-   API --> Profile[User Profile]
-
-   Auth --> login[loginUser()]
-   Auth --> current[getCurrentUser()]
-   Auth --> logout[logout()]
-   Auth --> reset[resetPassword()]
-
-   Assoc --> getAssoc[getAssociations()]
-   Assoc --> getDetails[getAssociationDetails()]
-   Assoc --> createAssoc[createAssociation()]
-   Assoc --> updateAssoc[updateAssociation()]
-
-   Docs --> getDocs[getDocuments()]
-   Docs --> upload[uploadDocument()]
-   Docs --> approve[approveDocument()]
-   Docs --> reject[rejectDocument()]
-   Docs --> updateDoc[updateDocument()]
-
-   Members --> getMembers[getAssociationMembers()]
-   Members --> createMember[createMembre()]
-
-   Mandats --> getMandats[getAssociationMandats()]
-   Mandats --> createMandat[createMandat()]
-   Mandats --> deleteMandat[deleteMandat()]
-
-   Profile --> updateProfile[updateUserProfile()]
-   Profile --> changePassword[changeUserPassword()]
+```
+Composants UI
+   ↓
+api.js (Axios)
+   ├─ Authentication
+   │   ├─ loginUser()
+   │   ├─ getCurrentUser()
+   │   ├─ logout()
+   │   └─ resetPassword()
+   ├─ Associations
+   │   ├─ getAssociations()
+   │   ├─ getAssociationDetails()
+   │   ├─ createAssociation()
+   │   └─ updateAssociation()
+   ├─ Documents
+   │   ├─ getDocuments()
+   │   ├─ uploadDocument()
+   │   ├─ approveDocument()
+   │   ├─ rejectDocument()
+   │   └─ updateDocument()
+   ├─ Membres
+   │   ├─ getAssociationMembers()
+   │   └─ createMembre()
+   ├─ Mandats
+   │   ├─ getAssociationMandats()
+   │   ├─ createMandat()
+   │   └─ deleteMandat()
+   └─ User Profile
+       ├─ updateUserProfile()
+       └─ changeUserPassword()
 ```
 
 ## Types de composants
@@ -222,7 +149,7 @@ flowchart LR
 - Shadcn/ui components (Button, Input, Dialog, Tabs, etc.)
 - Icones lucide-react
 
-## Flux d'authentification (Mermaid)
+## Flux d'authentification
 
 ```mermaid
 sequenceDiagram
@@ -292,10 +219,12 @@ sequenceDiagram
 
    Admin->>Modal: Ouvre la modale
    Admin->>Modal: Remplit le formulaire
+   Admin->>Modal: Saisit type + email + téléphone + SIRET + password
    Modal->>API: createAssociation(payload)
    API->>B: POST /associations
    B-->>API: 201 Created
-   API-->>Admin: succès
+   API-->>Modal: succès
+   Modal-->>Admin: ferme la modale
    Admin-->>Admin: rafraîchit la liste
 ```
 
@@ -309,12 +238,14 @@ sequenceDiagram
    participant B as Backend
 
    User->>Modal: Ouvre la modale
-   User->>Modal: Sélectionne type/date/fichier
+   User->>Modal: Sélectionne type + date + fichier
    Modal->>API: uploadDocument(formData)
    API->>B: POST /documents
-   B-->>API: 201 Created
-   API-->>User: succès
+   B-->>API: 201 Created + document status
+   API-->>Modal: succès
+   Modal-->>User: ferme la modale
    User-->>User: rafraîchit la liste
+   User-->>User: met à jour les stats
 ```
 
 ## Sécurité
