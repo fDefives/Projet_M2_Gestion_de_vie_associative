@@ -202,16 +202,19 @@ SPECTACULAR_SETTINGS = {
 AUTH_USER_MODEL = "api.CustomUser"
 
 # Email Configuration
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # Pour dev: affiche les emails dans la console
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Pour prod: utiliser SMTP
-DEFAULT_FROM_EMAIL = "no-reply@monapp.com"
+if DEBUG:
+    # Dev: affiche les emails dans la console
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    # Prod: utilise SMTP
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@monapp.com")
 
-# Pour SMTP (décommenter et configurer pour la production):
-# EMAIL_HOST = 'smtp.gmail.com'  # ou votre serveur SMTP
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'votre-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'votre-mot-de-passe-app'
 
 # Frontend URL (pour les liens dans les emails)
-FRONTEND_URL = "http://localhost:3001"
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3001" if DEBUG else "https://91.171.53.72:50043")

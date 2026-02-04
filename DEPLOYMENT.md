@@ -97,8 +97,23 @@ chmod 600 .env
 
 Après générations des certificats mettre dans le dossier 
 nginx/certs
-
 au besoin renommer dans nignx.conf lignes 19-20
+
+---
+## Etape 4 : configuration du mail et serv SMTP pour réniamisation mots de passe
+
+Dans le .env rajouter les varibles concernant le serveur SMTP
+
+```bash
+# Email 
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@example.com
+EMAIL_HOST_PASSWORD=your-email-password
+DEFAULT_FROM_EMAIL=no-reply@monapp.com
+FRONTEND_URL=https://your-frontend-domain.com
+```
 ---
 
 ## 🐳 Étape 4 : Construction et Lancement
