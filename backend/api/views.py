@@ -697,8 +697,28 @@ class MandatViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        """Crée un mandat"""
-        serializer.save()
+        """Crée un mandat et expire les documents si changement de président"""
+
+        mandat = serializer.save()
+
+        # Vérifier si le rôle est Président et actif
+        if (
+                mandat.role_type
+                and mandat.role_type.name.lower() == "président"
+                and mandat.statut == "active"
+        ):
+            association = mandat.association
+
+            # Expirer les documents concernés
+            Document.objects.filter(
+                id_association=association,
+                id_type_document__expire_si_changement_president=True,
+            ).exclude(
+                statut="expired"
+            ).update(
+                statut="expired"
+            )
+
 
     @action(
         detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated]

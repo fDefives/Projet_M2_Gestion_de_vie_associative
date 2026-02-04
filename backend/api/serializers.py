@@ -289,6 +289,7 @@ class TypeDocumentSerializer(serializers.ModelSerializer):
             "libelle",
             "obligatoire",
             "duree_validite_mois",
+            "expire_si_changement_president",  # ✅ AJOUT
             "created_at",
         ]
         read_only_fields = ["id_type_document", "created_at"]
