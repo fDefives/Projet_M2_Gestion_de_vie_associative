@@ -100,6 +100,8 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
       date_creation_association: new Date().toISOString().split('T')[0],
       email_contact: '',
       tel_contact: '',
+      insta_contact: '',
+      association_type: '',
     });
     setNewUser({ email: '', password: '', confirmPassword: '' });
     setAssociationTypeFilter('');
@@ -337,7 +339,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                             onChange={(e) => setNewAsso({ ...newAsso, num_siret: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="12345678901234"
-                            maxLength="14"
+                            maxLength={14}
                           />
                         </div>
 

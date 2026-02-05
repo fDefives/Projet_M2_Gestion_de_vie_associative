@@ -25,5 +25,7 @@ Le système de permissions est basé sur le rôle des utilisateurs (administrate
 <a href="ARCHITECTURE_FRONTEND.md">ARCHITECTURE_FRONTEND.md</a>
 
 ### La documentation du backend
+- [`backend/ROLES_AND_PERMISSIONS.md`](backend/ROLES_AND_PERMISSIONS.md) 
+- Système de permissions détaillé et fonctionnement du backend 
 
 <a href="VISUAL_GUIDE.md">VISUAL_GUIDE.md</a>

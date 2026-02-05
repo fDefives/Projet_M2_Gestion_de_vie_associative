@@ -6,7 +6,7 @@ Plateforme pour gérer la vie associative à LRU
 ## 📦 Composants Clés
 
 ### Frontend (`/frontend`)
-- **src/api.js** - 70+ endpoints pour communiquer avec le backend
+- **src/api.js** - 30+ endpoints pour communiquer avec le backend
 - **src/hooks.js** - Hooks React (useAuth, useDocuments, etc.)
 - **src/components/** - Composants UI (LoginPage, AdminDashboard, AssociationDashboard)
 - **src/lib/mockData.ts** - Données mockées pour tests
@@ -74,11 +74,12 @@ USER (is_staff=False)
 ### Option 1: Docker (Recommandé)
 ```bash
 docker-compose up --build
-# Front : http://localhost:3001/
-# API : http://localhost:8000/
-# Admin : http://localhost:8000/admin/
-# Swagger : http://localhost:8000/api/docs/
+
 ```
+Front : http://localhost:3001/  
+API : http://localhost:8000/api/docs/  pour test sur l'api  
+Admin : http://localhost:8000/admin/ pour accès direct à Django 
+
 
 ## 📊 Technologies Utilisées
 
@@ -107,8 +108,3 @@ docker-compose up --build
 - [`frontend/README.md`](frontend/README.md) - Guide frontend
 
 ## 🧪 Tests
-
-
-
-**Figma**: https://www.figma.com/files/team/1589991964439481275/
-**Docs**: https://docs.google.com/document/d/1bmRo8PIGphW91MOroWBuFODpw0Fkq1x-y7niN5SgrSs/
