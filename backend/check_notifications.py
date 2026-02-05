@@ -1,16 +1,13 @@
 #!/usr/bin/env python
 import os
 import django
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-django.setup()
-
 from api.models import Notification, Association, Mandat, RoleType
 from django.utils import timezone
 from django.db.models import Q
 
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+django.setup()
 today = timezone.now().date()
-
 print("=== Toutes les associations ===")
 for assoc in Association.objects.all():
     print(f"  ID {assoc.id_association}: {assoc.nom_association}")
@@ -21,7 +18,8 @@ try:
     print(f"  Trouvé: ID {president_role.id}")
 except RoleType.DoesNotExist:
     print("  NON TROUVÉ")
-    print(f"  Rôles disponibles: {list(RoleType.objects.values_list('name', flat=True))}")
+    print(f"  Rôles disponibles: "
+          f"{list(RoleType.objects.values_list('name', flat=True))}")
 
 print("\n=== Mandats Président actifs ===")
 try:
@@ -34,7 +32,8 @@ try:
     )
     print(f"  Total: {mandats.count()}")
     for mandat in mandats:
-        print(f"    {mandat.association.nom_association}: {mandat.membre.prenom} {mandat.membre.nom}")
+        print(f"    {mandat.association.nom_association}:"
+              f" {mandat.membre.prenom} {mandat.membre.nom}")
 except RoleType.DoesNotExist:
     print("  Rôle Président non trouvé")
 
@@ -42,10 +41,10 @@ print("\n=== Notifications Président ===")
 notifs = Notification.objects.filter(sujet__icontains="Président")
 print(f"  Total: {notifs.count()}")
 for notif in notifs:
-    print(f"    ID {notif.id_notification}: {notif.sujet} (assoc_id={notif.id_association_id}, is_read={notif.is_read})")
+    print(f"    ID {notif.id_notification}: {notif.sujet} "
+          f"(assoc_id={notif.id_association_id}, is_read={notif.is_read})")
 
 print("\n=== Toutes les notifications ===")
 print(f"  Total: {Notification.objects.count()}")
 for notif in Notification.objects.all()[:20]:
     print(f"    ID {notif.id_notification}: {notif.sujet} (is_read={notif.is_read})")
-

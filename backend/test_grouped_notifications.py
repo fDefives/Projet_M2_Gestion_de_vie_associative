@@ -3,15 +3,14 @@
 import os
 import sys
 import django
+from api.models import Notification
+from api.serializers import NotificationSerializer
+import json
 
 # Configuration Django
 sys.path.insert(0, '/app')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
-
-from api.models import Notification
-from api.serializers import NotificationSerializer
-
 print("=" * 80)
 print("TEST API NOTIFICATIONS - Groupement par association")
 print("=" * 80)
@@ -25,7 +24,7 @@ print(f"\n📋 Notifications non lues: {notifications.count()}")
 serializer = NotificationSerializer(notifications, many=True)
 
 # Afficher le résultat
-import json
+
 print("\n📤 Données sérialisées (format API):")
 print(json.dumps(serializer.data, indent=2, ensure_ascii=False))
 

@@ -3,15 +3,16 @@
 import os
 import sys
 import django
+from api.models import Association, TypeDocument, Document, Notification
+from django.utils import timezone
+from django.db import models
+
 
 # Configuration Django
 sys.path.insert(0, '/app')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from api.models import Association, TypeDocument, Document, Notification
-from django.utils import timezone
-from django.db import models
 
 today = timezone.now().date()
 
@@ -36,7 +37,7 @@ for notif in notifications:
     print(f"   - {notif.id_association.nom_association}: {notif.message}")
 
 # Associations sans documents obligatoires
-print(f"\n📊 État par association:")
+print("\n📊 État par association:")
 associations = Association.objects.all()
 
 for assoc in associations:
@@ -47,9 +48,9 @@ for assoc in associations:
             id_type_document=doc_type,
             statut__in=["submitted", "approved"],
         ).filter(
-            models.Q(date_expiration__isnull=True) | models.Q(date_expiration__gte=today)
+            models.Q(date_expiration__isnull=True) |
+            models.Q(date_expiration__gte=today)
         ).exists()
-        
         status = "✓ Déposé" if has_doc else "✗ Manquant"
         print(f"      {doc_type.libelle}: {status}")
 

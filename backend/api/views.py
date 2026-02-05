@@ -689,7 +689,8 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
             subject = f"Président manquant - {association.nom_association}"
             message = (
-                f"L'association {association.nom_association} n'a pas de président actif. "
+                f"L'association {association.nom_association} n'a pas de président "
+                f"actif. "
                 f"Merci d'ajouter un président."
             )
 
@@ -724,12 +725,15 @@ class NotificationViewSet(viewsets.ModelViewSet):
                     id_type_document=doc_type,
                     statut__in=["submitted", "approved"],
                 ).filter(
-                    models.Q(date_expiration__isnull=True) | models.Q(date_expiration__gte=today)
+                    models.Q(date_expiration__isnull=True) |
+                    models.Q(date_expiration__gte=today)
                 ).exists()
 
-                subject = f"Document obligatoire manquant - {association.nom_association}"
+                subject = (f"Document obligatoire manquant - "
+                           f"{association.nom_association}")
                 message = (
-                    f"L'association {association.nom_association} n'a pas déposé le document obligatoire "
+                    f"L'association {association.nom_association} n'a pas "
+                    f"déposé le document obligatoire "
                     f"\"{doc_type.libelle}\". Merci de le déposer dès que possible."
                 )
 
