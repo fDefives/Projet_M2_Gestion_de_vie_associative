@@ -3,6 +3,10 @@ Plateforme pour gérer la vie associative à LRU
 
 [![codecov](https://codecov.io/github/Urgaar/gestion_vie_associative/branch/dev/graph/badge.svg?token=8J851T2WNK)](https://codecov.io/github/Urgaar/gestion_vie_associative)
 
+## 🏗️ Architecture Globale
+
+[![](https://mermaid.ink/img/pako:eNqFVc1y0zAQfhWNeilTN9hx62IPw0zbUFp-QxrKDISDYq8TtbZlJBkITW_cucHAhRPvwPPwAvAISFbiOMYUX7xafd-udv2tfIlDFgEO8ISTfIqGB6MMqUcUY-M44iyTkEUvR_j3t0_ff_34WLnQ5gBIKNEWOqMSbozwK8PVz0M2oVmfTEDxKvv2mN-8s7lfyClkkoZEUpat0_ajlGY9IqaKVtljRnhkuPdAaBIieq9BFYKFS6q2aRn_XwFWiEaY_okKQHLaOReG4tpbSFWbM5pJsQ4-ZuxCKPhUvytCIUDXaCFl9FhYpLBGVLGM0ej0AQkvTKN_fv2i-7xwoM3eOckmDA3ung7X859ReKvzv9HvTj4z-b3SfwrN054CpySh74FrjlitKuaZckQtTekDT6kQyq-Z-WpVMQcH-4frnEdKVomGp6VRIRfFmO3_d6VHJBkTAaX-Pn_QfekzISccTp8-rHbXMj8TpsLDQkiW6pXJDCmhSflVeEZSsBBnCbSIyMhCrOvIhMhYaqEIRMhprr0WkrO8EaP65CrA0jbsmIZTCtxCQhJZSAvBu5zyln4_ZpLGiwHRYeprE0oU56ACpCCEGqzmMRrNrAYQbW_fmR8Ph300gNeFGoW51rsBVeN2LWg5ZNeByqkoAa2TUEMugvZPSrTWt17Mja7NZmmW2wtxwrwu5CbocArhxbwu2CbiaQF8Nl_or34M4ykxTwaP5kZG7Vt1mbQjqmrbt9c-cP0QZVK03VHA-8-HaMjUDdBSTv0ABn304K-k7aCW1BVvhaoVvxhIOUtgdfXHNEmCDc-JSDy2hOTqnMGG67pWyBLGgw3btuu85VVmaLbfha7dRovjuE5bjveC57renu_8k4ct9ROjEQ4kL8DCqWoa0Ut8qWOOsPrtpOqmCJQZQUyKRI7wKLtStJxkLxhLl0zOiskUBzFJhFoVuVZdjxJ1IaWVl6tygB-yIpM48Ny9MggOLvE7HPh2x3F2Hc_d6e7at3zPs_AMB47b2enu2Tu7ftfzHduznSsLvy_T2p1bqjLPt21_x3d2Pce7-gNn4ncS?type=png)](https://mermaid.live/edit#pako:eNqFVc1y0zAQfhWNeilTN9hx62IPw0zbUFp-QxrKDISDYq8TtbZlJBkITW_cucHAhRPvwPPwAvAISFbiOMYUX7xafd-udv2tfIlDFgEO8ISTfIqGB6MMqUcUY-M44iyTkEUvR_j3t0_ff_34WLnQ5gBIKNEWOqMSbozwK8PVz0M2oVmfTEDxKvv2mN-8s7lfyClkkoZEUpat0_ajlGY9IqaKVtljRnhkuPdAaBIieq9BFYKFS6q2aRn_XwFWiEaY_okKQHLaOReG4tpbSFWbM5pJsQ4-ZuxCKPhUvytCIUDXaCFl9FhYpLBGVLGM0ej0AQkvTKN_fv2i-7xwoM3eOckmDA3ung7X859ReKvzv9HvTj4z-b3SfwrN054CpySh74FrjlitKuaZckQtTekDT6kQyq-Z-WpVMQcH-4frnEdKVomGp6VRIRfFmO3_d6VHJBkTAaX-Pn_QfekzISccTp8-rHbXMj8TpsLDQkiW6pXJDCmhSflVeEZSsBBnCbSIyMhCrOvIhMhYaqEIRMhprr0WkrO8EaP65CrA0jbsmIZTCtxCQhJZSAvBu5zyln4_ZpLGiwHRYeprE0oU56ACpCCEGqzmMRrNrAYQbW_fmR8Ph300gNeFGoW51rsBVeN2LWg5ZNeByqkoAa2TUEMugvZPSrTWt17Mja7NZmmW2wtxwrwu5CbocArhxbwu2CbiaQF8Nl_or34M4ykxTwaP5kZG7Vt1mbQjqmrbt9c-cP0QZVK03VHA-8-HaMjUDdBSTv0ABn304K-k7aCW1BVvhaoVvxhIOUtgdfXHNEmCDc-JSDy2hOTqnMGG67pWyBLGgw3btuu85VVmaLbfha7dRovjuE5bjveC57renu_8k4ct9ROjEQ4kL8DCqWoa0Ut8qWOOsPrtpOqmCJQZQUyKRI7wKLtStJxkLxhLl0zOiskUBzFJhFoVuVZdjxJ1IaWVl6tygB-yIpM48Ny9MggOLvE7HPh2x3F2Hc_d6e7at3zPs_AMB47b2enu2Tu7ftfzHduznSsLvy_T2p1bqjLPt21_x3d2Pce7-gNn4ncS)
+
 ## 📦 Composants Clés
 
 ### Frontend (`/frontend`)
@@ -17,6 +21,7 @@ Plateforme pour gérer la vie associative à LRU
 - **api/serializers.py** - Serializers pour validation/transformation
 - **api/permissions.py** - Logique de permissions RBAC
 - **config/settings.py** - Configuration Django + JWT + CORS
+
 
 ### Base de Données (`PostgreSQL`)
 ```
@@ -118,7 +123,23 @@ Copiez le résultat dans SECRET_KEY= de votre `.env
 ## 📚 Documentation Complète
 
 - [`backend/ROLES_AND_PERMISSIONS.md`](backend/ROLES_AND_PERMISSIONS.md) - Système de permissions détaillé
+- [`frontend/README.md`](frontend/README.md) - Guide frontend
+
+## 📚 Documentation Complète
+
+- [`backend/ROLES_AND_PERMISSIONS.md`](backend/ROLES_AND_PERMISSIONS.md) - Système de permissions détaillé
 - [`VISUAL_GUIDE.md`](VISUAL_GUIDE.md) - Guide visuel étape par étape
 - [`frontend/README.md`](frontend/README.md) - Guide frontend
 
-## 🧪 Tests
+## ⚠️ Problème de fin de ligne (Windows)
+
+Si vous rencontrez des erreurs lors du lancement du Docker (problème avec `entrypoint.sh`), il faut modifier le format des fins de ligne :
+
+1. Ouvrir le fichier `entrypoint.sh` dans VS Code
+2. Cliquer sur **CRLF** en bas à droite
+3. Sélectionner **LF**
+4. Sauvegarder le fichier
+5. Relancer le container Docker
+
+> ℹ️ Ce problème n'affecte que les utilisateurs Windows avec VS Code 
+
