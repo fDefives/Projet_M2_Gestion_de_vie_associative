@@ -51,9 +51,17 @@ else
   echo "Applying migrations..."
   python manage.py migrate --noinput
 
-  echo "Initializing test data..."
-  python manage.py init_db || true
+  if [ "${DEBUG:-False}" = "True" ]; then
+    echo "Initializing test data..."
+    python manage.py init_db || true
+  else
+    echo "DEBUG is False. Skipping init_db."
+  fi
 fi
 
 echo "Starting server..."
-exec python manage.py runserver 0.0.0.0:8000
+python manage.py collectstatic --noinput
+exec gunicorn config.wsgi:application \
+  --bind 0.0.0.0:8000 \
+  --workers "${GUNICORN_WORKERS:-3}" \
+  --timeout "${GUNICORN_TIMEOUT:-120}"
