@@ -93,7 +93,7 @@ class Command(BaseCommand):
             (
                 "PRIMROSE",
                 "projet.primrose@gmail.com",
-                "Protections hygiéniques écologiques.",
+                "Lutte contre la précarité menstruelle.",
                 "Avenue Michel Crépeau",
                 "Solidarité",
             ),
