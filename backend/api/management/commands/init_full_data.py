@@ -3,6 +3,7 @@ from datetime import date
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.utils.crypto import get_random_string
 
 from api.models import (
     Association,
@@ -155,6 +156,27 @@ class Command(BaseCommand):
 
         assoc_map = {}
         for name, email, desc, ufr, type_name in associations:
+            # Créer un compte user pour l'association
+            password = get_random_string(12)
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={
+                    "username": email,
+                    "is_staff": False,
+                    "is_superuser": False,
+                    "is_active": True,
+                },
+            )
+            if created:
+                user.set_password(password)
+                user.save()
+                self.stdout.write(
+                    f"✓ User created for {name}: {email} (password: {password})"
+                )
+                
+            else:
+                self.stdout.write(f"• User already exists for {name}: {email}")
+
             assoc, _ = Association.objects.get_or_create(
                 nom_association=name,
                 defaults={
@@ -164,6 +186,9 @@ class Command(BaseCommand):
                     "association_type": assoc_type_map[type_name],
                 },
             )
+            if assoc.id_utilisateur is None:
+                assoc.id_utilisateur = user
+                assoc.save(update_fields=["id_utilisateur"])
             assoc_map[name] = assoc
 
         self.stdout.write(self.style.SUCCESS("✓ Associations created"))
