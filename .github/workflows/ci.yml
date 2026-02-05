@@ -51,6 +51,11 @@ jobs:
         working-directory: backend
         run: flake8 . --config=../.flake8
 
+      - name: Check migrations
+        working-directory: backend
+        run: |
+          python manage.py makemigrations --check --dry-run
+
       - name: Migrate database
         working-directory: backend
         run: |
@@ -141,11 +146,15 @@ jobs:
           pip install selenium pytest webdriver-manager
 
       # 🧠 DB + Django
+      - name: Check migrations
+        working-directory: backend
+        run: |
+          python manage.py makemigrations --check --dry-run
+
       - name: Migrate database
         working-directory: backend
         run: |
           python manage.py migrate --noinput
-
       - name: Create admin user
         working-directory: backend
         run: |
