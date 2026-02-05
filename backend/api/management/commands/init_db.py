@@ -11,6 +11,7 @@ from api.models import (
     Mandat,
     RoleType,
 )
+import os 
 
 User = get_user_model()
 
@@ -29,26 +30,27 @@ class Command(BaseCommand):
             return
 
         self.stdout.write("Initializing database...")
+        DEBUG = os.environ.get("DEBUG", "False") == "True"
 
         # ======================================================
         # ADMIN
         # ======================================================
-        admin, created = User.objects.get_or_create(
-            email="admin@example.com",
-            defaults={
-                "username": "admin@example.com",
-                "is_staff": True,
-                "is_superuser": True,
-                "role": "admin",
-            },
-        )
+        if DEBUG: 
+            admin, created = User.objects.get_or_create(
+                email="admin@example.com",
+                defaults={
+                    "username": "admin@example.com",
+                    "is_staff": True,
+                    "is_superuser": True,
+                },
+            )
 
-        if created:
-            admin.set_password("admin123")
-            admin.save()
-            self.stdout.write(self.style.SUCCESS("✓ Admin user created"))
-        else:
-            self.stdout.write("✓ Admin user already exists")
+            if created:
+                admin.set_password("admin123")
+                admin.save()
+                self.stdout.write(self.style.SUCCESS("✓ Admin user created"))
+            else:
+                self.stdout.write("✓ Admin user already exists")
 
         # ======================================================
         # TYPES D’ASSOCIATION
@@ -91,7 +93,7 @@ class Command(BaseCommand):
             (
                 "PRIMROSE",
                 "projet.primrose@gmail.com",
-                "Protections hygiéniques écologiques.",
+                "Lutte contre la précarité menstruelle.",
                 "Avenue Michel Crépeau",
                 "Solidarité",
             ),
@@ -223,29 +225,29 @@ class Command(BaseCommand):
                 ("Emile", "Thelliere", "Co-président"),
             ],
         }
+        if DEBUG: 
+            for assoc_name, members in DATA.items():
+                association = assoc_map.get(assoc_name)
+                if not association:
+                    continue
 
-        for assoc_name, members in DATA.items():
-            association = assoc_map.get(assoc_name)
-            if not association:
-                continue
+                for first, last, role in members:
+                    membre, _ = Membre.objects.get_or_create(
+                        prenom=first,
+                        nom=last,
+                    )
 
-            for first, last, role in members:
-                membre, _ = Membre.objects.get_or_create(
-                    prenom=first,
-                    nom=last,
-                )
+                    Mandat.objects.get_or_create(
+                        membre=membre,
+                        association=association,
+                        role_type=role_map[role.lower()],
+                        defaults={
+                            "statut": "active",
+                            "date_debut": date.today(),
+                        },
+                    )
 
-                Mandat.objects.get_or_create(
-                    membre=membre,
-                    association=association,
-                    role_type=role_map[role.lower()],
-                    defaults={
-                        "statut": "active",
-                        "date_debut": date.today(),
-                    },
-                )
-
-        self.stdout.write(self.style.SUCCESS("✓ Members & mandates created"))
+            self.stdout.write(self.style.SUCCESS("✓ Members & mandates created"))
 
         # ======================================================
         # TYPES DE DOCUMENTS
