@@ -72,6 +72,13 @@ def association_type(db):
 def association(db, normal_user, association_type):
     return Association.objects.create(
         nom_association="Association Test",
+        desc_association="Association de test",
+        num_siret="",
+        ufr="",
+        statut="active",
+        email_contact=None,
+        insta_contact="",
+        tel_contact="",
         id_utilisateur=normal_user,
         association_type=association_type,
     )
