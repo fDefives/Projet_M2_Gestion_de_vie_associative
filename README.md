@@ -121,14 +121,8 @@ Copiez le résultat dans SECRET_KEY= de votre `.env
 - **GitHub Actions** - CI/CD
 
 ## 📚 Documentation Complète
-
+- [`rapport_technique.md`](rapport_technique.md) - Rapport Technique 
 - [`backend/ROLES_AND_PERMISSIONS.md`](backend/ROLES_AND_PERMISSIONS.md) - Système de permissions détaillé
-- [`frontend/README.md`](frontend/README.md) - Guide frontend
-
-## 📚 Documentation Complète
-
-- [`backend/ROLES_AND_PERMISSIONS.md`](backend/ROLES_AND_PERMISSIONS.md) - Système de permissions détaillé
-- [`VISUAL_GUIDE.md`](VISUAL_GUIDE.md) - Guide visuel étape par étape
 - [`frontend/README.md`](frontend/README.md) - Guide frontend
 
 ## ⚠️ Problème de fin de ligne (Windows)
