@@ -59,6 +59,7 @@ App (App.tsx)
 ├─ AdminDashboard
 │   ├─ Sidebar
 │   ├─ StatsOverview
+│   │   └─ PresidentChangeAlerts (notifications prioritaires)
 │   ├─ AssociationsList
 │   │   └─ AssociationDetailView
 │   │       ├─ OverviewTab
@@ -72,6 +73,7 @@ App (App.tsx)
 │
 └─ AssociationDashboard
     ├─ Header (email + settings)
+    ├─ PresidentChangeAlerts (notifications prioritaires)
     ├─ Tabs (overview, documents, leaders)
     └─ Modals
         ├─ UserUploadDocumentModal
@@ -108,6 +110,9 @@ api.js (Axios)
    │   ├─ getAssociationMandats()
    │   ├─ createMandat()
    │   └─ deleteMandat()
+   ├─ Notifications
+   │   ├─ getUnreadNotifications()
+   │   └─ markNotificationsAsRead()
    └─ User Profile
        ├─ updateUserProfile()
        └─ changeUserPassword()
@@ -141,13 +146,21 @@ api.js (Axios)
   - `UserEditAssociationModal.tsx` - Édition association (user)
   - `UserSettingsModal.tsx` - Paramètres utilisateur (email/password)
 
-### 5. **Composants utilitaires (Utils)**
+### 5. **Composants de notifications (Notifications)**
+- `PresidentChangeAlerts.tsx` - Affichage des notifications avec tri par priorité
+  - Tri automatique : error > warning > success > info
+  - Auto-refresh toutes les 30 secondes
+  - Bouton Masquer/Afficher pour contrôler la visibilité
+  - Boutons individuels pour marquer comme lus
+  - Réactualisation automatique si notification supprimée prématurément
+
+### 6. **Composants utilitaires (Utils)**
 - `DocumentStatusBadge.tsx` - Badge statut document
 - `ImageWithFallback.tsx` - Image avec fallback
 
-### 6. **Composants UI (UI Library)**
+### 7. **Composants UI (UI Library)**
 - Shadcn/ui components (Button, Input, Dialog, Tabs, etc.)
-- Icones lucide-react
+- Icones lucide-react (Bell, CheckCircle2, AlertCircle, Info, ChevronDown, ChevronUp, etc.)
 
 ## Flux d'authentification
 
@@ -248,6 +261,64 @@ sequenceDiagram
    User-->>User: met à jour les stats
 ```
 
+## Système de notifications
+
+### Architecture des notifications
+
+Les notifications sont gérées par un système intelligent d'auto-régénération :
+
+```
+Frontend (PresidentChangeAlerts)
+   ↓
+GET /api/notifications/unread/
+   ↓
+Backend (NotificationViewSet.get_queryset())
+   ├─ _ensure_expiration_notifications()
+   │   └─ Documents expirant dans 60 jours
+   ├─ _ensure_president_notifications()
+   │   └─ Associations sans président
+   └─ _ensure_mandatory_documents_notifications()
+       └─ Documents obligatoires manquants
+   ↓
+Retour notifications (is_read=False)
+   ↓
+Frontend: Tri par priorité + affichage
+```
+
+### Types de notifications
+
+| Type | Priorité | Couleur | Cas d'usage |
+|------|----------|---------|------------|
+| **error** | 1 (max) | 🔴 Rouge | Président manquant (alerte) |
+| **warning** | 2 | 🟠 Orange | Documents expirant bientôt, documents obligatoires manquants |
+| **success** | 3 | 🟢 Vert | (réservé) |
+| **info** | 4 | 🔵 Bleu | (réservé) |
+
+### Tri et affichage
+
+- **Tri primaire** : par priorité (error > warning > success > info)
+- **Tri secondaire** : par date (plus récent en premier)
+- **Affichage** : 3 notifications visibles, bouton "Voir plus" si > 3
+- **Contrôle de visibilité** : Bouton "Masquer/Afficher" pour collaber le bloc
+- **Compteur** : Badge affichant le nombre total (toujours visible)
+
+### Auto-régénération
+
+Les notifications sont **jamais supprimées** mais **recréées automatiquement** si :
+
+1. **Condition toujours vraie** : Notification recréée avec `is_read=False`
+2. **Notification supprimée** : Recréée au prochain appel API
+3. **Notification marquée comme lue** : Réactivée si condition toujours vraie
+4. **Condition résolue** : Notification marquée `is_read=True` (disparait)
+
+**Exemple** : Vous supprimez une notification "Président manquant" sans ajouter de président → Elle se régénère au prochain appel API.
+
+### Rafraîchissement
+
+- **Auto-refresh** : Toutes les 30 secondes
+- **Manuel** : Bouton ✓ pour marquer comme lu individuellement
+- **Réactif** : Chaque action (upload document, création mandat) déclenche une vérification
+
 ## Sécurité
 
 - **JWT Bearer Token** - Autorisation sur chaque requête
@@ -262,3 +333,4 @@ sequenceDiagram
 - **Optimisation images** - ImageWithFallback
 - **Pagination** - Listes avec pagination backend
 - **Caching** - localStorage pour tokens + user info
+- **Notifications** - Tri et affichage optimisés (3 visibles par défaut)
