@@ -18,11 +18,6 @@ class Migration(migrations.Migration):
             model_name='membre',
             name='tel',
         ),
-        migrations.AddField(
-            model_name='typedocument',
-            name='expire_si_changement_president',
-            field=models.BooleanField(default=False, help_text='Si vrai, le document expire automatiquement lors du changement de président'),
-        ),
         migrations.AlterField(
             model_name='association',
             name='desc_association',
