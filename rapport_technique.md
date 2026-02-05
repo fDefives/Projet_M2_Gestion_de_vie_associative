@@ -28,4 +28,4 @@ Le système de permissions est basé sur le rôle des utilisateurs (administrate
 - [`backend/ROLES_AND_PERMISSIONS.md`](backend/ROLES_AND_PERMISSIONS.md) 
 - Système de permissions détaillé et fonctionnement du backend 
 
-<a href="VISUAL_GUIDE.md">VISUAL_GUIDE.md</a>
+
