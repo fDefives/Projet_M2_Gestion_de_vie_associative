@@ -45,8 +45,27 @@ export function PresidentChangeAlerts() {
     }
   };
 
-  const displayedNotifications = showAll ? notifications : notifications.slice(0, 3);
-  const hasMore = notifications.length > 3;
+  // Fonction pour obtenir la priorité d'une notification
+  const getPriority = (type: string): number => {
+    switch (type) {
+      case 'error': return 1;
+      case 'warning': return 2;
+      case 'success': return 3;
+      case 'info': return 4;
+      default: return 5;
+    }
+  };
+
+  // Trier les notifications par priorité (error > warning > success > info)
+  const sortedNotifications = [...notifications].sort((a, b) => {
+    const priorityDiff = getPriority(a.type) - getPriority(b.type);
+    if (priorityDiff !== 0) return priorityDiff;
+    // Si même priorité, trier par date (plus récent en premier)
+    return new Date(b.date_envoi).getTime() - new Date(a.date_envoi).getTime();
+  });
+
+  const displayedNotifications = showAll ? sortedNotifications : sortedNotifications.slice(0, 3);
+  const hasMore = sortedNotifications.length > 3;
 
   if (loading) {
     return null;
@@ -132,7 +151,7 @@ export function PresidentChangeAlerts() {
               onClick={() => setShowAll(true)}
               className="w-full py-2 text-center text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
             >
-              Voir les {notifications.length - 3} notifications supplémentaires
+              Voir les {sortedNotifications.length - 3} notifications supplémentaires
             </button>
           )}
 

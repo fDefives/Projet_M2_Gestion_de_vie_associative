@@ -40,7 +40,6 @@ export function LeadersTab({ associationId }: LeadersTabProps) {
   const [roleTypes, setRoleTypes] = useState<RoleTypeData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddMandatForm, setShowAddMandatForm] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -102,7 +101,6 @@ export function LeadersTab({ associationId }: LeadersTabProps) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Bureau et mandats</h3>
         <button
-          onClick={() => setShowAddMandatForm(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
