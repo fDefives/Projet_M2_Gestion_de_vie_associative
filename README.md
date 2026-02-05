@@ -72,27 +72,28 @@ USER (is_staff=False)
 ## 🚀 Démarrage de l'Application
 
 ### Option 1: Docker (Recommandé)
+
+**L'authentification s'effectue avec l'username**
+
+
+Le démarrage de l'application nécessite un .env à la racine du projet incluant la variable :
+Un .env.example complet est disponible à la racine du projet pour vous aider à configurer les variables d'environnement nécessaires.
+
+    DB_PASSWORD=postgres
+
 ```bash
 docker-compose up --build
-# Front : http://localhost:3001/
-# API : http://localhost:8000/
-# Admin : http://localhost:8000/admin/
-```
 
-### Option 2: Local
-```bash
-# Terminal 1: Backend
-cd backend
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py init_full_data
-python manage.py runserver
-
-# Terminal 2: Frontend
-cd frontend
-npm install
-npm run dev
 ```
+Front : http://localhost:3001/  
+API : http://localhost:8000/api/docs/  pour test sur l'api  
+Admin : http://localhost:8000/admin/ pour accès direct à Django 
+
+### Générer une SECRET_KEY sécurisée
+
+    python3 -c "import secrets; print(secrets.token_urlsafe(50))"
+
+Copiez le résultat dans SECRET_KEY= de votre `.env 
 
 ## 📊 Technologies Utilisées
 
@@ -121,8 +122,3 @@ npm run dev
 - [`frontend/README.md`](frontend/README.md) - Guide frontend
 
 ## 🧪 Tests
-
-
-
-**Figma**: https://www.figma.com/files/team/1589991964439481275/
-**Docs**: https://docs.google.com/document/d/1bmRo8PIGphW91MOroWBuFODpw0Fkq1x-y7niN5SgrSs/

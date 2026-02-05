@@ -289,6 +289,7 @@ class TypeDocumentSerializer(serializers.ModelSerializer):
             "libelle",
             "obligatoire",
             "duree_validite_mois",
+            "expire_si_changement_president",  # ✅ AJOUT
             "created_at",
         ]
         read_only_fields = ["id_type_document", "created_at"]
@@ -396,6 +397,12 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
                 "Cette adresse email est déjà utilisée."
             )
         return value
+
+    def update(self, instance, validated_data):
+        # Si l'email est modifié, mettre à jour automatiquement le username
+        if 'email' in validated_data:
+            validated_data['username'] = validated_data['email']
+        return super().update(instance, validated_data)
 
 
 class MandatSerializer(serializers.ModelSerializer):

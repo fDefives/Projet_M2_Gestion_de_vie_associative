@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { LogOut, Users, FileText, BarChart3, Settings, Plus } from 'lucide-react';
+import { LogOut, Users, FileText, BarChart3, Settings, Plus, UserCog } from 'lucide-react';
 import DocumentsList from './admin/DocumentsList';
 import { User } from '../App';
 import { AssociationsList } from './admin/AssociationsList';
 import { AssociationDetailView } from './admin/AssociationDetailView';
 import { StatsOverview } from './admin/StatsOverview';
 import { SettingsPanel } from './admin/SettingsPanel';
+import { UserSettingsModal } from './shared/modals/UserSettingsModal';
 import * as API from '../api';
 
 interface AdminDashboardProps {
@@ -35,8 +36,10 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
+    confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
 
   // Load association types on mount
   React.useEffect(() => {
@@ -97,51 +100,59 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
       date_creation_association: new Date().toISOString().split('T')[0],
       email_contact: '',
       tel_contact: '',
+      insta_contact: '',
+      association_type: '',
     });
-    setNewUser({ email: '', password: '' });
+    setNewUser({ email: '', password: '', confirmPassword: '' });
     setAssociationTypeFilter('');
     setShowCreateModal(false);
   };
 
   const handleCreateAssociation = async () => {
-    // Vérifications basiques
-    if (!newAsso.nom_association || !newAsso.ufr || !newAsso.num_siret || !newAsso.date_creation_association || !newAsso.email_contact || !newAsso.tel_contact || !newAsso.association_type) {
-      alert('Tous les champs association sont obligatoires');
+    // Vérifications des champs obligatoires uniquement
+    if (!newAsso.nom_association) {
+      alert('Le nom de l\'association est obligatoire');
       return;
     }
-    if (!newUser.email || !newUser.password) {
+    if (!newUser.email || !newUser.password || !newUser.confirmPassword) {
       alert('Email et mot de passe du compte association sont obligatoires');
       return;
     }
 
-    // Validations spécifiques
-    if (!isValidEmail(newAsso.email_contact)) {
-      alert('Format d\'email de contact invalide. Exemple: contact@association.fr');
-      return;
-    }
-
+    // Validations spécifiques pour l'email utilisateur
     if (!isValidEmail(newUser.email)) {
       alert('Format d\'email utilisateur invalide. Exemple: user@mail.com');
       return;
     }
 
-    if (!isValidSiret(newAsso.num_siret)) {
+    // Validations optionnelles (si les champs sont remplis)
+    if (newAsso.email_contact && !isValidEmail(newAsso.email_contact)) {
+      alert('Format d\'email de contact invalide. Exemple: contact@association.fr');
+      return;
+    }
+
+    if (newAsso.num_siret && !isValidSiret(newAsso.num_siret)) {
       alert('SIRET invalide. Le SIRET doit contenir exactement 14 chiffres.');
       return;
     }
 
-    if (!isValidPhoneNumber(newAsso.tel_contact)) {
+    if (newAsso.tel_contact && !isValidPhoneNumber(newAsso.tel_contact)) {
       alert('Numéro de téléphone invalide. Veuillez entrer un numéro français valide (ex: 0612345678 ou +33612345678).');
       return;
     }
 
-    if (!isValidDate(newAsso.date_creation_association)) {
+    if (newAsso.date_creation_association && !isValidDate(newAsso.date_creation_association)) {
       alert('La date de création ne peut pas être dans le futur.');
       return;
     }
 
     if (newUser.password.length < 8) {
       alert('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+
+    if (newUser.password !== newUser.confirmPassword) {
+      alert('Les mots de passe ne correspondent pas.');
       return;
     }
 
@@ -165,7 +176,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
         insta_contact: '',
         association_type: '',
       });
-      setNewUser({ email: '', password: '' });
+      setNewUser({ email: '', password: '', confirmPassword: '' });
       setAssociationTypeFilter('');
       setShowCreateModal(false);
       // Refresh associations list
@@ -191,6 +202,13 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
             
             <div className="flex items-center gap-4">
               <span className="text-gray-700">{user.email}</span>
+              <button
+                onClick={() => setShowUserSettingsModal(true)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Paramètres du compte"
+              >
+                <UserCog className="w-4 h-4" />
+              </button>
               <button
                 onClick={onLogout}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -263,7 +281,9 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
           {/* Main Content */}
           <main className="flex-1 min-w-0">
             {currentView === 'overview' && !selectedAssociation && (
-              <StatsOverview onSelectAssociation={handleSelectAssociation} refreshKey={refreshKey} />
+              <div className="space-y-6">
+                <StatsOverview onSelectAssociation={handleSelectAssociation} refreshKey={refreshKey} />
+              </div>
             )}
 
             {currentView === 'associations' && !selectedAssociation && (
@@ -290,7 +310,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Nom</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Nom <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             value={newAsso.nom_association}
@@ -319,7 +339,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                             onChange={(e) => setNewAsso({ ...newAsso, num_siret: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="12345678901234"
-                            maxLength="14"
+                            maxLength={14}
                           />
                         </div>
 
@@ -375,7 +395,6 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                             }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             size={5}
-                            required
                           >
                             <option value="">-- Sélectionner un type --</option>
                             {associationTypes
@@ -401,9 +420,9 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                       </div>
 
                     <div className="border-t border-gray-200 pt-3">
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2" style={{ marginTop: '5%' }}>Email utilisateur</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email utilisateur <span className="text-red-500">*</span></label>
                           <input
                             type="email"
                             value={newUser.email}
@@ -412,15 +431,27 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                             placeholder="user@mail.com"
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2" style={{ marginTop: '5%' }}>Mot de passe</label>
-                          <input
-                            type="password"
-                            value={newUser.password}
-                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="********"
-                          />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe <span className="text-red-500">*</span></label>
+                            <input
+                              type="password"
+                              value={newUser.password}
+                              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="********"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe <span className="text-red-500">*</span></label>
+                            <input
+                              type="password"
+                              value={newUser.confirmPassword}
+                              onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="********"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -465,6 +496,15 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
           </main>
         </div>
       </div>
+
+      {/* User Settings Modal */}
+      {showUserSettingsModal && (
+        <UserSettingsModal
+          userEmail={user.email}
+          onClose={() => setShowUserSettingsModal(false)}
+          onSuccess={onLogout}
+        />
+      )}
     </div>
   );
 }

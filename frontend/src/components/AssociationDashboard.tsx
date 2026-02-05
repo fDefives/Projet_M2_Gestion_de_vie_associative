@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { LogOut, FileText, Upload, AlertCircle, CheckCircle2, Clock, Download, Edit2, Search, Building2, Mail, Phone, Instagram } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { LogOut, FileText, AlertCircle, CheckCircle2, Clock, Download, Edit2, Search, Building2, Mail, Phone, Instagram, Upload, Settings } from 'lucide-react';
 import { User } from '../App';
 import { DocumentStatusBadge } from './shared/DocumentStatusBadge';
 import { MandatsManager } from './admin/MandatsManager';
+import { PresidentChangeAlerts } from './admin/PresidentChangeAlerts';
+import { UserUploadDocumentModal } from './shared/modals/UserUploadDocumentModal';
+import { UserEditAssociationModal } from './shared/modals/UserEditAssociationModal';
+import { UserSettingsModal } from './shared/modals/UserSettingsModal';
 import * as API from '../api';
 
 interface AssociationDashboardProps {
@@ -15,15 +19,12 @@ type AssociationTab = 'overview' | 'documents' | 'leaders';
 export function AssociationDashboard({ user, onLogout }: AssociationDashboardProps) {
   const [activeTab, setActiveTab] = useState<AssociationTab>('overview');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedDocType, setSelectedDocType] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [dateEmission, setDateEmission] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
   const [association, setAssociation] = useState<any>(null);
   const [documents, setDocuments] = useState<any[]>([]);
   const [documentTypes, setDocumentTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
   const loadData = async () => {
@@ -108,6 +109,13 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
               <div className="flex items-center gap-4">
                 <span className="text-gray-700">{user.email}</span>
                 <button
+                  onClick={() => setShowUserSettingsModal(true)}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Paramètres du compte"
+                >
+                  <Settings size={20} />
+                </button>
+                <button
                   onClick={onLogout}
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -128,36 +136,6 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
     );
   }
 
-  const handleUploadDocument = async () => {
-    if (!selectedFile || !selectedDocType || !dateEmission) {
-      setError('Veuillez remplir tous les champs requis');
-      return;
-    }
-
-    try {
-      setUploading(true);
-      setError('');
-
-      const formData = new FormData();
-      formData.append('nom_fichier', selectedFile);
-      formData.append('id_association', association.id_association.toString());
-      formData.append('id_type_document', selectedDocType);
-      formData.append('date_emission', dateEmission);
-
-      await API.uploadDocument(formData);
-      await loadData();
-      setShowUploadModal(false);
-      setSelectedFile(null);
-      setSelectedDocType('');
-      setDateEmission('');
-    } catch (err) {
-      console.error('Erreur upload:', err);
-      setError('Erreur lors de l\'upload du document');
-    } finally {
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -172,6 +150,13 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
             <div className="flex items-center gap-4">
               <span className="text-gray-700">{user.email}</span>
               <button
+                onClick={() => setShowUserSettingsModal(true)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Paramètres du compte"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
                 onClick={onLogout}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
@@ -184,6 +169,9 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="mb-6">
+          <PresidentChangeAlerts />
+        </div>
         {(() => {
           // Trouver les types de documents obligatoires
           const requiredDocTypes = documentTypes.filter((dt: any) => dt.obligatoire);
@@ -315,7 +303,7 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Dirigeants
+                Membres
               </button>
             </div>
           </div>
@@ -350,272 +338,30 @@ export function AssociationDashboard({ user, onLogout }: AssociationDashboardPro
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Importer un document</h2>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de document <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedDocType}
-                  onChange={(e) => setSelectedDocType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Sélectionner un type</option>
-                  {documentTypes.map((type) => (
-                    <option key={type.id_type_document} value={type.id_type_document}>
-                      {type.libelle}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date d'émission <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={dateEmission}
-                  onChange={(e) => setDateEmission(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fichier <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="file"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setSelectedFile(e.target.files[0]);
-                      setError('');
-                    }
-                  }}
-                  accept=".pdf"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {selectedFile && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Fichier sélectionné : {selectedFile.name}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="h-6" />
-            <div className="flex gap-4 mt-6">
-              <button
-                onClick={() => {
-                  setShowUploadModal(false);
-                  setSelectedFile(null);
-                  setSelectedDocType('');
-                  setDateEmission('');
-                  setError('');
-                }}
-                disabled={uploading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleUploadDocument}
-                disabled={!selectedFile || !selectedDocType || !dateEmission || uploading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {uploading ? 'Envoi en cours...' : 'Importer'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <UserUploadDocumentModal
+          associationId={association?.id_association}
+          onClose={() => setShowUploadModal(false)}
+          onSuccess={loadData}
+        />
       )}
 
       {/* Edit Association Modal */}
       {showEditModal && (
-        <EditAssociationModal
+        <UserEditAssociationModal
           association={association}
           onClose={() => setShowEditModal(false)}
           onSuccess={loadData}
         />
       )}
-    </div>
-  );
-}
 
-// Modal pour modifier l'association
-interface EditAssociationModalProps {
-  association: any;
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-function EditAssociationModal({ association, onClose, onSuccess }: EditAssociationModalProps) {
-  const [formData, setFormData] = useState({
-    nom_association: association.nom_association || '',
-    ufr: association.ufr || '',
-    num_siret: association.num_siret || '',
-    email_contact: association.email_contact || '',
-    tel_contact: association.tel_contact || '',
-    insta_contact: association.insta_contact || '',
-    desc_association: association.desc_association || '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setSaving(true);
-      setError('');
-
-      await API.updateAssociation(association.id_association, formData);
-      onSuccess();
-      onClose();
-    } catch (err) {
-      console.error('Error updating association:', err);
-      setError('Erreur lors de la mise à jour de l\'association');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(23, 23, 23, 0.54)' }}>
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-lg w-full my-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Modifier les informations</h2>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nom de l'association</label>
-              <input
-                type="text"
-                name="nom_association"
-                value={formData.nom_association}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Nom de l'association"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">UFR</label>
-              <input
-                type="text"
-                name="ufr"
-                value={formData.ufr}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="UFR"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">SIRET</label>
-              <input
-                type="text"
-                name="num_siret"
-                value={formData.num_siret}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="123 456 789 00012"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email de contact</label>
-              <input
-                type="email"
-                name="email_contact"
-                value={formData.email_contact}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="contact@association.fr"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-              <input
-                type="tel"
-                name="tel_contact"
-                value={formData.tel_contact}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="01234567890"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Instagram</label>
-              <input
-                type="text"
-                name="insta_contact"
-                value={formData.insta_contact}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="@association"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <textarea
-                name="desc_association"
-                value={formData.desc_association}
-                onChange={handleChange}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Description de l'association..."
-              />
-            </div>
-          </div>
-
-          <div className="h-6" />
-          <div className="flex gap-4 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
-          </div>
-        </form>
-      </div>
+      {/* User Settings Modal */}
+      {showUserSettingsModal && (
+        <UserSettingsModal
+          userEmail={user.email}
+          onClose={() => setShowUserSettingsModal(false)}
+          onSuccess={onLogout}
+        />
+      )}
     </div>
   );
 }
@@ -655,9 +401,17 @@ function AssociationOverviewTab({ association, documents, documentTypes }: any) 
   
   const validatedCount = obligatoryDocs.filter((d: any) => d.statut === 'approved').length;
   const pendingCount = obligatoryDocs.filter((d: any) => d.statut === 'submitted').length;
-  const actionCount = obligatoryDocs.filter(
-    (d: any) => d.statut === 'rejected' || d.statut === 'expired'
-  ).length;
+  const approvedTypeNames = new Set(
+    documents
+      .filter((d: any) => d.statut === 'approved')
+      .map((d: any) => (d.type_document_name || '').toLowerCase()),
+  );
+  const actionCount = obligatoryDocs.filter((d: any) => {
+    if (d.statut === 'rejected') return true;
+    if (d.statut !== 'expired') return false;
+    const typeName = (d.type_document_name || '').toLowerCase();
+    return !approvedTypeNames.has(typeName);
+  }).length;
   const missingCount = documentStatus.filter(ds => ds.status === 'missing' && ds.isRequired).length;
 
   return (

@@ -215,8 +215,17 @@ export function MandatsManager({ associationId, onDataChanged }: MandatsManagerP
   const getMembreInfo = (id: number) => membres.find((m) => m.id_membre === id);
   const getRoleTypeName = (id: number) => roleTypes.find((r) => r.id === id)?.name || 'Rôle';
 
-  const activeMandats = useMemo(() => mandats.filter((m) => m.statut !== 'termine'), [mandats]);
-  const terminedMandats = useMemo(() => mandats.filter((m) => m.statut === 'termine'), [mandats]);
+  // Vérifier si un mandat est terminé (statut ou date passée)
+  const isTerminated = (mandat: MandatData) => {
+    if (mandat.statut === 'termine') return true;
+    if (mandat.date_fin) {
+      return new Date(mandat.date_fin) < new Date();
+    }
+    return false;
+  };
+
+  const activeMandats = useMemo(() => mandats.filter((m) => !isTerminated(m)), [mandats]);
+  const terminedMandats = useMemo(() => mandats.filter((m) => isTerminated(m)), [mandats]);
   const displayedMandats = viewMode === 'bureau' ? activeMandats : mandats;
 
   const mandatsByRole = useMemo(() => {
