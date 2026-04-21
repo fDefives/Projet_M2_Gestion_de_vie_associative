@@ -1,6 +1,13 @@
 # gestion_vie_associative
 Plateforme pour gérer la vie associative à LRU
 
+# Contribution au projet 
+Sur ce projet, j’ai principalement travaillé sur le backend, notamment sur la sécurisation des accès à la plateforme et la gestion du stockage des documents. J’ai développé une API en Python avec le framework Django afin d’assurer la communication entre le frontend et la base de données PostgreSQL.
+
+Ce projet a été réalise en colaboration aevc Sylvain Granier et Maude Hacala 
+
+
+
 [![codecov](https://codecov.io/github/Urgaar/gestion_vie_associative/branch/dev/graph/badge.svg?token=8J851T2WNK)](https://codecov.io/github/Urgaar/gestion_vie_associative)
 
 ## 🏗️ Architecture Globale
