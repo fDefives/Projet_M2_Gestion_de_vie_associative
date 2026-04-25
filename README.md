@@ -1,10 +1,21 @@
-# gestion_vie_associative
-Plateforme pour gérer la vie associative à LRU
+# Gestion de vie associative
+Plateforme à destination de la chargée de vie associative à La Rochelle Université.
 
-# Contribution au projet 
+# Objectifs
+La plateforme doit centraliser les dépôts de documents des associations, permettre à chaque association de mettre à jour ses membres et déclencher des alertes en cas de changement de bureau (président,trésorier,etc..). Coté gestion la plateforme offre une vision globale et un historique complet de l’ensemble des associations ainsi qu'une possibilité d'envoi de mail automatique pour rappeler les différents documents à déposer.
+
+# Contraintes du projet 
+* Authentification et gestion des droits : chaque association accède uniquement à
+ses propres documents
+* Gestion des dates d’expiration : vérification automatique de la validité des
+documents requis pour les subventions
+* Chaîne de validation des documents : validation, refus et suivi des documents
+expirés ou non conformes
+
+# Contribution personnelle au projet 
 Sur ce projet, j’ai principalement travaillé sur le backend, notamment sur la sécurisation des accès à la plateforme et la gestion du stockage des documents. J’ai développé une API en Python avec le framework Django afin d’assurer la communication entre le frontend et la base de données PostgreSQL.
 
-Ce projet a été réalise en colaboration aevc Sylvain Granier et Maude Hacala 
+Ce projet a été réalisé en collaboration avec Sylvain Granier et Maude Hacala.
 
 
 
